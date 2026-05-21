@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPORT TIMER</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --work: #e8ff3b;
+    --rest: #3bffd4;
+    --bg: #0a0a0a;
+    --panel: #111;
+    --panel2: #161616;
+    --border: #222;
+    --text: #fff;
+    --muted: #555;
+    --danger: #ff3b3b;
+    --save: #a78bfa;
+  }
+
+  body.dark-mode {
+    --work: #fff;
+    --rest: #888;
+    --bg: #000;
+    --panel: #050505;
+    --panel2: #080808;
+    --border: #111;
+    --text: #fff;
+    --muted: #333;
+    --danger: #555;
+    --save: #444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    position: relative;
+    transition: background 0.4s;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+  }
+
+  .bg-ring {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    border: 1px solid rgba(232,255,59,0.04);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: border-color 0.5s;
+  }
+  .bg-ring:nth-child(2) { width: 800px; height: 800px; border-color: rgba(232,255,59,0.03); }
+  .bg-ring:nth-child(3) { width: 1000px; height: 1000px; border-color: rgba(232,255,59,0.02); }
+  body.rest-phase .bg-ring { border-color: rgba(59,255,212,0.04); }
+  body.rest-phase .bg-ring:nth-child(2) { border-color: rgba(59,255,212,0.03); }
+  body.rest-phase .bg-ring:nth-child(3) { border-color: rgba(59,255,212,0.02); }
+  body.dark-mode .bg-ring, body.dark-mode.rest-phase .bg-ring { border-color: rgba(255,255,255,0.02); }
+
+  /* TOP BAR */
+  .topbar {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 6px;
+    color: var(--muted);
+  }
+
+  .topbar-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+
+  .icon-btn:hover { border-color: var(--work); color: var(--work); }
+  .icon-btn.active-mode { border-color: var(--muted); color: var(--text); background: var(--panel); }
+
+  /* MAIN WRAPPER */
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 520px;
+    padding: 14px 20px 30px;
+  }
+
+  .phase-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: var(--work);
+    transition: color 0.4s;
+    min-height: 24px;
+    text-align: center;
+  }
+  body.rest-phase .phase-label { color: var(--rest); }
+
+  /* TIMER */
+  .timer-container {
+    position: relative;
+    width: 280px; height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .progress-svg {
+    position: absolute;
+    inset: 0; width: 100%; height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .progress-track { fill: none; stroke: var(--border); stroke-width: 4; }
+  .progress-fill {
+    fill: none; stroke: var(--work); stroke-width: 4; stroke-linecap: round;
+    transition: stroke-dashoffset 0.25s linear, stroke 0.4s;
+  }
+  body.rest-phase .progress-fill { stroke: var(--rest); }
+
+  .timer-inner { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+  .time-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 76px; line-height: 1;
+    letter-spacing: 2px;
+    color: var(--text);
+    transition: color 0.4s;
+    user-select: none;
+  }
+  body.rest-phase .time-display { color: var(--rest); }
+  .time-display.work-active { color: var(--work); }
+
+  .round-counter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px; letter-spacing: 3px;
+    color: var(--muted);
+  }
+
+  .round-counter span { color: var(--work); }
+  body.rest-phase .round-counter span { color: var(--rest); }
+
+  /* SERIES INPUT */
+  .series-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+
+  .series-label {
+    font-size: 11px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase;
+  }
+
+  .series-minus, .series-plus {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px; width: 28px; height: 28px;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .series-minus:hover, .series-plus:hover { border-color: var(--work); color: var(--work); }
+
+  .series-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 2px; color: var(--text);
+    min-width: 30px; text-align: center;
+  }
+
+  .series-unit {
+    font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase;
+  }
+
+  /* PRESETS */
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+  .preset-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px; letter-spacing: 2px;
+    padding: 8px 14px; cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  }
+  .preset-btn:hover { border-color: var(--work); color: var(--work); }
+  .preset-btn.active { background: var(--work); border-color: var(--work); color: #000; }
+  body.rest-phase .preset-btn.active { background: var(--rest); border-color: var(--rest); }
+
+  /* CUSTOM */
+  .custom-row {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; justify-content: center;
+  }
+
+  .custom-label { font-size: 11px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+
+  .custom-input {
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 2px;
+    padding: 6px 12px; width: 70px; text-align: center; outline: none;
+    transition: border-color 0.2s;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+  .custom-input:focus { border-color: var(--work); }
+  .custom-input::placeholder { color: var(--muted); }
+
+  .custom-set-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px; letter-spacing: 2px;
+    padding: 7px 14px; cursor: pointer; transition: all 0.2s;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+  .custom-set-btn:hover { border-color: var(--work); color: var(--work); }
+
+  /* REST INFO */
+  .rest-info {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    padding: 7px 16px;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+  .rest-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rest); flex-shrink: 0; }
+  .rest-info-text { font-size: 12px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .rest-info-time { font-family: 'Bebas Neue', sans-serif; font-size: 14px; color: var(--rest); letter-spacing: 2px; margin-left: 4px; }
+
+  /* ROUNDS DOTS */
+  .rounds-display {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    justify-content: center; max-width: 320px; min-height: 16px;
+  }
+  .round-dot {
+    width: 8px; height: 8px; border-radius: 1px;
+    background: var(--border); transition: background 0.3s, box-shadow 0.3s;
+    transform: rotate(45deg);
+  }
+  .round-dot.done { background: var(--work); }
+  .round-dot.active { background: var(--work); box-shadow: 0 0 6px var(--work); }
+  body.rest-phase .round-dot.active { background: var(--rest); box-shadow: 0 0 6px var(--rest); }
+
+  /* SPACE KEY */
+  .spacebar-hint { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .key {
+    background: var(--panel); border: 1px solid var(--border);
+    border-bottom: 3px solid var(--border);
+    padding: 6px 28px; font-size: 10px; letter-spacing: 3px;
+    color: var(--muted); text-transform: uppercase; transition: all 0.1s;
+  }
+  .key.pressed { border-bottom-width: 1px; transform: translateY(2px); background: var(--panel2); }
+  .hint-text { font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+
+  /* BOTTOM ACTIONS */
+  .bottom-actions { display: flex; gap: 10px; align-items: center; }
+
+  .reset-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 12px; letter-spacing: 3px;
+    padding: 6px 16px; cursor: pointer; transition: all 0.2s;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+  .reset-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  .stats-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 12px; letter-spacing: 3px;
+    padding: 6px 16px; cursor: pointer; transition: all 0.2s;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+  .stats-btn:hover { border-color: var(--save); color: var(--save); }
+
+  /* TOTAL WORK STRIP */
+  .total-strip {
+    display: flex; gap: 20px; align-items: center;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 8px 20px; width: 100%;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+  .total-item { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
+  .total-val { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--work); }
+  .total-label { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+
+  /* FLASH & NOTIF */
+  .flash {
+    position: fixed; inset: 0; pointer-events: none;
+    z-index: 99; opacity: 0; transition: opacity 0.1s;
+  }
+  .flash.work-flash { background: var(--work); }
+  .flash.rest-flash { background: var(--rest); }
+  .flash.trigger { opacity: 0.12; }
+
+  .notif {
+    position: fixed; top: 24px; left: 50%;
+    transform: translateX(-50%) translateY(-60px);
+    background: var(--work); color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px; letter-spacing: 4px;
+    padding: 8px 24px;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 200; white-space: nowrap;
+  }
+  .notif.show { transform: translateX(-50%) translateY(0); }
+  .notif.rest { background: var(--rest); }
+  .notif.done { background: var(--save); color: #fff; }
+
+  /* PANELS OVERLAY */
+  .panel-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    z-index: 300; display: none;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .panel-overlay.open { display: flex; }
+
+  .panel-box {
+    background: var(--panel); border: 1px solid var(--border);
+    width: 100%; max-width: 480px; max-height: 85vh;
+    overflow-y: auto; margin: 20px;
+    clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+  }
+
+  .panel-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--panel); z-index: 1;
+  }
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 18px;
+    letter-spacing: 4px; color: var(--text);
+  }
+  .panel-close {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 12px; letter-spacing: 2px; padding: 4px 12px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .panel-close:hover { border-color: var(--danger); color: var(--danger); }
+
+  .panel-body { padding: 20px; }
+
+  /* SAVE PROGRAM */
+  .save-row {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 20px;
+  }
+  .save-input {
+    background: var(--panel2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; letter-spacing: 1px; padding: 8px 14px;
+    flex: 1; outline: none; transition: border-color 0.2s;
+  }
+  .save-input:focus { border-color: var(--save); }
+  .save-input::placeholder { color: var(--muted); }
+  .save-go-btn {
+    background: var(--save); border: none; color: #000;
+    font-family: 'Bebas Neue', sans-serif; font-size: 14px;
+    letter-spacing: 2px; padding: 8px 20px; cursor: pointer;
+    transition: opacity 0.2s; clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+  .save-go-btn:hover { opacity: 0.8; }
+
+  .programs-list { display: flex; flex-direction: column; gap: 8px; }
+  .program-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel2); border: 1px solid var(--border);
+    padding: 10px 14px; cursor: pointer; transition: border-color 0.2s;
+  }
+  .program-item:hover { border-color: var(--save); }
+  .program-info { flex: 1; }
+  .program-name {
+    font-family: 'Bebas Neue', sans-serif; font-size: 15px;
+    letter-spacing: 2px; color: var(--text);
+  }
+  .program-details { font-size: 11px; letter-spacing: 2px; color: var(--muted); margin-top: 2px; }
+  .program-load {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px; letter-spacing: 2px; padding: 4px 10px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .program-load:hover { border-color: var(--save); color: var(--save); }
+  .program-del {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px; letter-spacing: 2px; padding: 4px 10px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .program-del:hover { border-color: var(--danger); color: var(--danger); }
+
+  .empty-state {
+    text-align: center; padding: 30px;
+    font-size: 12px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase;
+  }
+
+  /* STATS PANEL */
+  .stats-section { margin-bottom: 24px; }
+  .stats-section-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 14px;
+    letter-spacing: 3px; color: var(--muted); margin-bottom: 12px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+
+  .stat-big {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .stat-card {
+    flex: 1; min-width: 80px;
+    background: var(--panel2); border: 1px solid var(--border);
+    padding: 12px; text-align: center;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+  .stat-card-val {
+    font-family: 'Bebas Neue', sans-serif; font-size: 28px;
+    letter-spacing: 2px; color: var(--work);
+  }
+  .stat-card-label { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+  .history-list { display: flex; flex-direction: column; gap: 6px; }
+  .history-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 14px; background: var(--panel2); border: 1px solid var(--border);
+  }
+  .history-left { display: flex; flex-direction: column; gap: 2px; }
+  .history-time { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 2px; color: var(--muted); }
+  .history-desc { font-size: 13px; letter-spacing: 1px; color: var(--text); }
+  .history-right { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--work); }
+
+  .clear-hist-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px; letter-spacing: 2px; padding: 5px 14px;
+    cursor: pointer; transition: all 0.2s; margin-top: 10px;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  }
+  .clear-hist-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* Animations */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .pulsing { animation: pulse 0.6s ease-in-out infinite; }
+
+  @keyframes complete-pop { 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
+  .complete-pop { animation: complete-pop 0.4s ease; }
+
+  /* Scrollbar */
+  .panel-box::-webkit-scrollbar { width: 4px; }
+  .panel-box::-webkit-scrollbar-track { background: var(--panel); }
+  .panel-box::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+
+<div class="bg-ring"></div>
+<div class="bg-ring"></div>
+<div class="bg-ring"></div>
+<div class="flash work-flash" id="flash"></div>
+<div class="notif" id="notif">GO !</div>
+
+<!-- SAVE PROGRAMS PANEL -->
+<div class="panel-overlay" id="programsPanel">
+  <div class="panel-box">
+    <div class="panel-header">
+      <span class="panel-title">PROGRAMMES</span>
+      <button class="panel-close" onclick="closePanel('programsPanel')">✕ FERMER</button>
+    </div>
+    <div class="panel-body">
+      <div class="save-row">
+        <input class="save-input" id="programNameInput" placeholder="Nom du programme…" maxlength="30">
+        <button class="save-go-btn" id="saveProgramBtn">SAVE</button>
+      </div>
+      <div class="programs-list" id="programsList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS & HISTORY PANEL -->
+<div class="panel-overlay" id="statsPanel">
+  <div class="panel-box">
+    <div class="panel-header">
+      <span class="panel-title">STATS DU JOUR</span>
+      <button class="panel-close" onclick="closePanel('statsPanel')">✕ FERMER</button>
+    </div>
+    <div class="panel-body">
+      <div class="stats-section">
+        <div class="stats-section-title">SESSION EN COURS</div>
+        <div class="stat-big">
+          <div class="stat-card">
+            <div class="stat-card-val" id="statTotalWork">0:00</div>
+            <div class="stat-card-label">Temps travail</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-val" id="statRounds">0</div>
+            <div class="stat-card-label">Rounds</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-val" id="statSeries">0</div>
+            <div class="stat-card-label">Séries</div>
+          </div>
+        </div>
+      </div>
+      <div class="stats-section">
+        <div class="stats-section-title">HISTORIQUE DU JOUR</div>
+        <div class="history-list" id="historyList"></div>
+        <button class="clear-hist-btn" id="clearHistBtn">EFFACER L'HISTORIQUE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">Sport Timer</div>
+  <div class="topbar-right">
+    <button class="icon-btn" id="darkModeBtn">● SOMBRE</button>
+    <button class="icon-btn" onclick="openPanel('programsPanel'); renderPrograms()">PROGRAMMES</button>
+    <button class="icon-btn" onclick="openPanel('statsPanel'); renderStats()">STATS</button>
+  </div>
+</div>
+
+<div class="wrapper">
+  <div class="phase-label" id="phaseLabel">PRÊT</div>
+
+  <div class="timer-container" id="timerContainer">
+    <svg class="progress-svg" viewBox="0 0 300 300">
+      <circle class="progress-track" cx="150" cy="150" r="140"/>
+      <circle class="progress-fill" id="progressFill" cx="150" cy="150" r="140"/>
+    </svg>
+    <div class="timer-inner">
+      <div class="time-display" id="timeDisplay">1:00</div>
+      <div class="round-counter" id="roundCounter">SÉRIE <span id="rcCurrent">1</span> / <span id="rcTotal">1</span></div>
+    </div>
+  </div>
+
+  <!-- SÉRIES -->
+  <div class="series-row">
+    <span class="series-label">Séries</span>
+    <button class="series-minus" id="seriesMinus">−</button>
+    <span class="series-val" id="seriesVal">1</span>
+    <button class="series-plus" id="seriesPlus">+</button>
+    <span class="series-unit">série(s)</span>
+  </div>
+
+  <!-- DURÉE TRAVAIL -->
+  <div class="presets">
+    <button class="preset-btn active" data-min="1">1 MIN</button>
+    <button class="preset-btn" data-min="2">2 MIN</button>
+    <button class="preset-btn" data-min="5">5 MIN</button>
+    <button class="preset-btn" data-min="10">10 MIN</button>
+  </div>
+
+  <div class="custom-row">
+    <span class="custom-label">Perso</span>
+    <input class="custom-input" type="number" id="customInput" min="1" max="60" placeholder="MIN">
+    <button class="custom-set-btn" id="customSetBtn">OK</button>
+  </div>
+
+  <div class="rest-info">
+    <div class="rest-dot"></div>
+    <span class="rest-info-text">Repos :</span>
+    <span class="rest-info-time" id="restInfoTime">20 sec</span>
+  </div>
+
+  <!-- DOTS -->
+  <div class="rounds-display" id="roundsDots"></div>
+
+  <!-- TOTAL STRIP -->
+  <div class="total-strip">
+    <div class="total-item">
+      <div class="total-val" id="totalWorkDisplay">0:00</div>
+      <div class="total-label">Travail total</div>
+    </div>
+    <div class="total-item">
+      <div class="total-val" id="completedSeriesDisplay">0</div>
+      <div class="total-label">Séries faites</div>
+    </div>
+    <div class="total-item">
+      <div class="total-val" id="totalRoundsDisplay">0</div>
+      <div class="total-label">Rounds</div>
+    </div>
+  </div>
+
+  <!-- SPACE -->
+  <div class="spacebar-hint">
+    <div class="key" id="spaceKey">ESPACE</div>
+    <div class="hint-text" id="hintText">Appuie pour démarrer</div>
+  </div>
+
+  <div class="bottom-actions">
+    <button class="reset-btn" id="resetBtn">↺ RESET</button>
+  </div>
+</div>
+
+<script>
+// ─── AUDIO (Web Audio API) ───────────────────────────────────────────────────
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  return audioCtx;
+}
+
+function beep(freq, duration, type = 'sine', vol = 0.4) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+function playWorkStart() {
+  beep(880, 0.12, 'square', 0.3);
+  setTimeout(() => beep(1100, 0.18, 'square', 0.3), 120);
+}
+
+function playRestStart() {
+  beep(440, 0.2, 'sine', 0.35);
+  setTimeout(() => beep(330, 0.3, 'sine', 0.3), 180);
+}
+
+function playDone() {
+  beep(660, 0.1); setTimeout(() => beep(880, 0.1), 110);
+  setTimeout(() => beep(1100, 0.1), 220); setTimeout(() => beep(1320, 0.3), 330);
+}
+
+function playCountdown() { beep(660, 0.08, 'square', 0.2); }
+
+function playCountdownTick() { beep(880, 0.1, 'square', 0.35); }
+function playCountdownGo() {
+  beep(1100, 0.08, 'square', 0.5);
+  setTimeout(() => beep(1320, 0.08, 'square', 0.5), 90);
+  setTimeout(() => beep(1760, 0.25, 'square', 0.5), 180);
+}
+
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const REST_MAP = { 1: 20, 2: 40, 5: 100, 10: 200 };
+
+let workDuration = 60;
+let restDuration = 20;
+let workMinutes = 1;
+let timeLeft = 60;
+let totalTime = 60;
+let isRunning = false;
+let isRest = false;
+let interval = null;
+let roundDots = [];
+
+// Series
+let targetSeries = 1;
+let currentSeries = 1;
+
+// Stats
+let sessionWorkSeconds = 0;
+let sessionCompletedSeries = 0;
+let sessionRounds = 0;
+let todayHistory = [];
+
+// Countdown
+let isCountingDown = false;
+let countdownTimeout = null;
+
+// Dark mode
+let darkMode = false;
+
+const circumference = 2 * Math.PI * 140;
+
+// ─── ELEMENTS ────────────────────────────────────────────────────────────────
+const timeDisplay   = document.getElementById('timeDisplay');
+const phaseLabel    = document.getElementById('phaseLabel');
+const progressFill  = document.getElementById('progressFill');
+const spaceKey      = document.getElementById('spaceKey');
+const hintText      = document.getElementById('hintText');
+const resetBtn      = document.getElementById('resetBtn');
+const restInfoTime  = document.getElementById('restInfoTime');
+const roundsDots    = document.getElementById('roundsDots');
+const flash         = document.getElementById('flash');
+const notif         = document.getElementById('notif');
+const rcCurrent     = document.getElementById('rcCurrent');
+const rcTotal       = document.getElementById('rcTotal');
+const seriesVal     = document.getElementById('seriesVal');
+const totalWorkDisplay       = document.getElementById('totalWorkDisplay');
+const completedSeriesDisplay = document.getElementById('completedSeriesDisplay');
+const totalRoundsDisplay     = document.getElementById('totalRoundsDisplay');
+
+progressFill.style.strokeDasharray = circumference;
+progressFill.style.strokeDashoffset = 0;
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function getRestForMins(m) {
+  if (REST_MAP[m]) return REST_MAP[m];
+  return Math.round(m * 20);
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  return m + ':' + String(s % 60).padStart(2, '0');
+}
+
+function updateProgress(cur, tot) {
+  progressFill.style.strokeDashoffset = circumference * (1 - cur / tot);
+}
+
+function showNotif(msg, type) {
+  notif.textContent = msg;
+  notif.className = 'notif' + (type ? ' ' + type : '');
+  void notif.offsetWidth;
+  notif.classList.add('show');
+  setTimeout(() => notif.classList.remove('show'), 2400);
+}
+
+function triggerFlash(type) {
+  flash.className = 'flash ' + (type === 'rest' ? 'rest-flash' : 'work-flash');
+  flash.classList.add('trigger');
+  setTimeout(() => flash.classList.remove('trigger'), 150);
+}
+
+function updateTotalStrip() {
+  totalWorkDisplay.textContent = formatTime(sessionWorkSeconds);
+  completedSeriesDisplay.textContent = sessionCompletedSeries;
+  totalRoundsDisplay.textContent = sessionRounds;
+}
+
+function updateRoundCounter() {
+  rcCurrent.textContent = currentSeries;
+  rcTotal.textContent = targetSeries;
+}
+
+// ─── DOTS ────────────────────────────────────────────────────────────────────
+function rebuildDots() {
+  roundsDots.innerHTML = '';
+  roundDots = [];
+  for (let i = 0; i < targetSeries; i++) {
+    const d = document.createElement('div');
+    d.className = 'round-dot';
+    if (i < sessionCompletedSeries) d.classList.add('done');
+    else if (i === currentSeries - 1 && isRunning) d.classList.add('active');
+    roundsDots.appendChild(d);
+    roundDots.push(d);
+  }
+}
+
+function markDotActive(idx) {
+  roundDots.forEach(d => d.classList.remove('active'));
+  if (roundDots[idx]) roundDots[idx].classList.add('active');
+}
+
+function markDotDone(idx) {
+  if (roundDots[idx]) {
+    roundDots[idx].classList.remove('active');
+    roundDots[idx].classList.add('done');
+  }
+}
+
+// ─── PHASES ──────────────────────────────────────────────────────────────────
+function startWork() {
+  isRest = false;
+  timeLeft = workDuration;
+  totalTime = workDuration;
+  document.body.classList.remove('rest-phase');
+  phaseLabel.textContent = 'TRAVAIL';
+  timeDisplay.classList.remove('work-active');
+  void timeDisplay.offsetWidth;
+  timeDisplay.classList.add('work-active');
+  updateProgress(timeLeft, totalTime);
+  timeDisplay.textContent = formatTime(timeLeft);
+  hintText.textContent = 'ESPACE = pause';
+  markDotActive(currentSeries - 1);
+  playWorkStart();
+  vibrate([80, 40, 80]);
+}
+
+function startRest() {
+  isRest = true;
+  timeLeft = restDuration;
+  totalTime = restDuration;
+  document.body.classList.add('rest-phase');
+  phaseLabel.textContent = 'REPOS';
+  timeDisplay.classList.remove('work-active');
+  updateProgress(timeLeft, totalTime);
+  timeDisplay.textContent = formatTime(timeLeft);
+  hintText.textContent = 'Repos en cours…';
+
+  // stats
+  sessionWorkSeconds += workDuration;
+  sessionRounds++;
+  updateTotalStrip();
+
+  markDotDone(currentSeries - 1);
+  triggerFlash('rest');
+  showNotif('REPOS — ' + formatTime(restDuration), 'rest');
+  playRestStart();
+  vibrate([200, 80, 200]);
+}
+
+function finishSeries() {
+  // All series done
+  clearInterval(interval);
+  isRunning = false;
+  isRest = false;
+  document.body.classList.remove('rest-phase');
+  timeDisplay.classList.remove('work-active', 'pulsing');
+
+  sessionCompletedSeries++;
+  updateTotalStrip();
+  rebuildDots();
+
+  // Save to today's history
+  const now = new Date();
+  const timeStr = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+  const entry = {
+    time: timeStr,
+    work: formatTime(workDuration),
+    series: targetSeries,
+    totalWork: formatTime(sessionWorkSeconds)
+  };
+  todayHistory.unshift(entry);
+  saveTodayHistory();
+
+  playDone();
+  vibrate([100,50,100,50,300]);
+  triggerFlash('work');
+  showNotif('SESSION TERMINÉE !', 'done');
+  phaseLabel.textContent = 'TERMINÉ 🎉';
+  hintText.textContent = 'Appuie ESPACE pour recommencer';
+
+  // animate timer
+  timeDisplay.classList.add('complete-pop');
+  setTimeout(() => timeDisplay.classList.remove('complete-pop'), 400);
+
+  // Reset for next session
+  currentSeries = 1;
+  updateRoundCounter();
+  timeLeft = workDuration;
+  totalTime = workDuration;
+  updateProgress(timeLeft, totalTime);
+  timeDisplay.textContent = formatTime(timeLeft);
+}
+
+function advanceToNextSeries() {
+  // rest done → next series or finish
+  currentSeries++;
+  if (currentSeries > targetSeries) {
+    finishSeries();
+  } else {
+    updateRoundCounter();
+    clearInterval(interval);
+    startWork();
+    interval = setInterval(tick, 1000);
+    triggerFlash('work');
+    showNotif('SÉRIE ' + currentSeries + ' / ' + targetSeries, '');
+  }
+}
+
+// ─── TICK ────────────────────────────────────────────────────────────────────
+function tick() {
+  if (timeLeft <= 0) {
+    if (!isRest) {
+      clearInterval(interval);
+      startRest();
+      interval = setInterval(tick, 1000);
+    } else {
+      advanceToNextSeries();
+    }
+    return;
+  }
+  timeLeft--;
+  timeDisplay.textContent = formatTime(timeLeft);
+  updateProgress(timeLeft, totalTime);
+
+  // Work stat counter (live)
+  if (!isRest && isRunning) {
+    updateTotalStrip();
+  }
+
+  // Countdown beeps last 3s
+  if (timeLeft <= 3 && timeLeft > 0) {
+    timeDisplay.classList.add('pulsing');
+    playCountdown();
+  } else {
+    timeDisplay.classList.remove('pulsing');
+  }
+}
+
+// ─── COUNTDOWN 3-2-1 GO ──────────────────────────────────────────────────────
+function startCountdown(callback) {
+  isCountingDown = true;
+  hintText.textContent = 'ESPACE = annuler';
+  let count = 3;
+
+  function step() {
+    if (!isCountingDown) return; // cancelled
+    if (count > 0) {
+      phaseLabel.textContent = count + '…';
+      timeDisplay.textContent = count;
+      timeDisplay.classList.remove('work-active');
+      updateProgress(count, 3);
+      playCountdownTick();
+      vibrate(40);
+      count--;
+      countdownTimeout = setTimeout(step, 1000);
+    } else {
+      phaseLabel.textContent = 'GO !';
+      timeDisplay.textContent = 'GO';
+      updateProgress(1, 1);
+      playCountdownGo();
+      vibrate([60, 30, 60]);
+      triggerFlash('work');
+      countdownTimeout = setTimeout(() => {
+        isCountingDown = false;
+        callback();
+      }, 600);
+    }
+  }
+  step();
+}
+
+function cancelCountdown() {
+  isCountingDown = false;
+  clearTimeout(countdownTimeout);
+  phaseLabel.textContent = 'PRÊT';
+  hintText.textContent = 'Appuie pour démarrer';
+  timeDisplay.textContent = formatTime(workDuration);
+  timeDisplay.classList.remove('work-active');
+  updateProgress(workDuration, workDuration);
+}
+
+// ─── TOGGLE ──────────────────────────────────────────────────────────────────
+function toggleTimer() {
+  if (isRest) return;
+  getAudioCtx();
+
+  if (isCountingDown) {
+    cancelCountdown();
+    return;
+  }
+
+  if (!isRunning) {
+    startCountdown(() => {
+      isRunning = true;
+      startWork();
+      interval = setInterval(tick, 1000);
+    });
+  } else {
+    isRunning = false;
+    clearInterval(interval);
+    phaseLabel.textContent = 'PAUSE';
+    hintText.textContent = 'ESPACE = reprendre';
+  }
+}
+
+// ─── DURATION ────────────────────────────────────────────────────────────────
+function setDuration(mins) {
+  if (isRunning || isCountingDown) return;
+  workMinutes = mins;
+  workDuration = mins * 60;
+  restDuration = getRestForMins(mins);
+  timeLeft = workDuration;
+  totalTime = workDuration;
+  timeDisplay.textContent = formatTime(timeLeft);
+  updateProgress(timeLeft, totalTime);
+  restInfoTime.textContent = formatTime(restDuration);
+  document.querySelectorAll('.preset-btn').forEach(b =>
+    b.classList.toggle('active', parseInt(b.dataset.min) === mins)
+  );
+  document.getElementById('customInput').value = '';
+}
+
+// ─── SERIES ──────────────────────────────────────────────────────────────────
+function setSeries(n) {
+  if (isRunning || isCountingDown) return;
+  targetSeries = Math.max(1, Math.min(20, n));
+  seriesVal.textContent = targetSeries;
+  updateRoundCounter();
+  rebuildDots();
+}
+
+document.getElementById('seriesMinus').addEventListener('click', () => setSeries(targetSeries - 1));
+document.getElementById('seriesPlus').addEventListener('click', () => setSeries(targetSeries + 1));
+
+// ─── PRESETS ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.preset-btn').forEach(btn =>
+  btn.addEventListener('click', () => setDuration(parseInt(btn.dataset.min)))
+);
+
+document.getElementById('customSetBtn').addEventListener('click', () => {
+  const val = parseInt(document.getElementById('customInput').value);
+  if (val >= 1 && val <= 60) {
+    if (isRunning) return;
+    workMinutes = val;
+    workDuration = val * 60;
+    restDuration = getRestForMins(val);
+    timeLeft = workDuration;
+    totalTime = workDuration;
+    timeDisplay.textContent = formatTime(timeLeft);
+    updateProgress(timeLeft, totalTime);
+    restInfoTime.textContent = formatTime(restDuration);
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  }
+});
+
+document.getElementById('customInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('customSetBtn').click();
+});
+
+// ─── RESET ───────────────────────────────────────────────────────────────────
+resetBtn.addEventListener('click', () => {
+  if (isCountingDown) cancelCountdown();
+  clearInterval(interval);
+  isRunning = false; isRest = false;
+  currentSeries = 1;
+  document.body.classList.remove('rest-phase');
+  timeDisplay.classList.remove('work-active', 'pulsing');
+  phaseLabel.textContent = 'PRÊT';
+  hintText.textContent = 'Appuie pour démarrer';
+  timeLeft = workDuration; totalTime = workDuration;
+  timeDisplay.textContent = formatTime(timeLeft);
+  updateProgress(timeLeft, totalTime);
+  updateRoundCounter();
+  rebuildDots();
+});
+
+// ─── KEYBOARD ────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+    e.preventDefault();
+    spaceKey.classList.add('pressed');
+    toggleTimer();
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'Space') spaceKey.classList.remove('pressed');
+});
+
+document.getElementById('timerContainer').addEventListener('click', () => {
+  if (!isRest) toggleTimer();
+});
+
+// ─── DARK MODE ───────────────────────────────────────────────────────────────
+const darkBtn = document.getElementById('darkModeBtn');
+darkBtn.addEventListener('click', () => {
+  darkMode = !darkMode;
+  document.body.classList.toggle('dark-mode', darkMode);
+  darkBtn.classList.toggle('active-mode', darkMode);
+  localStorage.setItem('sport_dark', darkMode ? '1' : '0');
+});
+
+// ─── PROGRAMS ────────────────────────────────────────────────────────────────
+function getPrograms() {
+  try { return JSON.parse(localStorage.getItem('sport_programs') || '[]'); } catch { return []; }
+}
+function savePrograms(arr) { localStorage.setItem('sport_programs', JSON.stringify(arr)); }
+
+document.getElementById('saveProgramBtn').addEventListener('click', () => {
+  const name = document.getElementById('programNameInput').value.trim();
+  if (!name) return;
+  const programs = getPrograms();
+  programs.unshift({
+    name,
+    workMin: workMinutes,
+    series: targetSeries,
+    rest: restDuration,
+    saved: new Date().toLocaleDateString('fr-FR')
+  });
+  savePrograms(programs);
+  document.getElementById('programNameInput').value = '';
+  renderPrograms();
+  showNotif('PROGRAMME SAUVEGARDÉ', 'done');
+});
+
+function renderPrograms() {
+  const list = document.getElementById('programsList');
+  const programs = getPrograms();
+  if (!programs.length) {
+    list.innerHTML = '<div class="empty-state">Aucun programme sauvegardé</div>';
+    return;
+  }
+  list.innerHTML = programs.map((p, i) => `
+    <div class="program-item">
+      <div class="program-info">
+        <div class="program-name">${p.name}</div>
+        <div class="program-details">${p.workMin} min · ${p.series} série(s) · repos ${formatTime(p.rest)} · ${p.saved}</div>
+      </div>
+      <button class="program-load" onclick="loadProgram(${i})">CHARGER</button>
+      <button class="program-del" onclick="deleteProgram(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function loadProgram(i) {
+  if (isRunning) return;
+  const p = getPrograms()[i];
+  if (!p) return;
+  workMinutes = p.workMin;
+  workDuration = p.workMin * 60;
+  restDuration = p.rest;
+  timeLeft = workDuration; totalTime = workDuration;
+  timeDisplay.textContent = formatTime(timeLeft);
+  updateProgress(timeLeft, totalTime);
+  restInfoTime.textContent = formatTime(restDuration);
+  document.querySelectorAll('.preset-btn').forEach(b =>
+    b.classList.toggle('active', parseInt(b.dataset.min) === p.workMin)
+  );
+  setSeries(p.series);
+  closePanel('programsPanel');
+  showNotif('PROGRAMME : ' + p.name.toUpperCase(), 'done');
+}
+
+function deleteProgram(i) {
+  const programs = getPrograms();
+  programs.splice(i, 1);
+  savePrograms(programs);
+  renderPrograms();
+}
+
+// ─── HISTORY ─────────────────────────────────────────────────────────────────
+function getTodayKey() {
+  const d = new Date();
+  return `sport_hist_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`;
+}
+
+function saveTodayHistory() {
+  localStorage.setItem(getTodayKey(), JSON.stringify(todayHistory));
+}
+
+function loadTodayHistory() {
+  try {
+    const raw = localStorage.getItem(getTodayKey());
+    todayHistory = raw ? JSON.parse(raw) : [];
+  } catch { todayHistory = []; }
+}
+
+function renderStats() {
+  document.getElementById('statTotalWork').textContent = formatTime(sessionWorkSeconds);
+  document.getElementById('statRounds').textContent = sessionRounds;
+  document.getElementById('statSeries').textContent = sessionCompletedSeries;
+
+  const list = document.getElementById('historyList');
+  if (!todayHistory.length) {
+    list.innerHTML = '<div class="empty-state">Aucune session aujourd\'hui</div>';
+    return;
+  }
+  list.innerHTML = todayHistory.map(h => `
+    <div class="history-item">
+      <div class="history-left">
+        <div class="history-time">${h.time}</div>
+        <div class="history-desc">${h.work} × ${h.series} série(s)</div>
+      </div>
+      <div class="history-right">${h.totalWork}</div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('clearHistBtn').addEventListener('click', () => {
+  todayHistory = [];
+  saveTodayHistory();
+  renderStats();
+});
+
+// ─── PANEL HELPERS ───────────────────────────────────────────────────────────
+function openPanel(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closePanel(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close on overlay click
+document.querySelectorAll('.panel-overlay').forEach(el => {
+  el.addEventListener('click', e => {
+    if (e.target === el) el.classList.remove('open');
+  });
+});
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+(function init() {
+  // dark mode
+  if (localStorage.getItem('sport_dark') === '1') {
+    darkMode = true;
+    document.body.classList.add('dark-mode');
+    darkBtn.classList.add('active-mode');
+  }
+  loadTodayHistory();
+  updateProgress(timeLeft, totalTime);
+  restInfoTime.textContent = formatTime(restDuration);
+  updateRoundCounter();
+  rebuildDots();
+})();
+</script>
+</body>
+</html>
