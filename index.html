@@ -32,6 +32,69 @@
     --save: #444;
   }
 
+
+  /* ── THEMES ── */
+  body.theme-fire   { --work: #ff6b35; --rest: #ffd166; --bg: #0d0500; --panel: #150800; --panel2: #1a0a00; --border: #2a1200; }
+  body.theme-ice    { --work: #7dd3fc; --rest: #e0f2fe; --bg: #020d18; --panel: #041220; --panel2: #051828; --border: #0a2540; }
+  body.theme-neon   { --work: #f0abfc; --rest: #a5f3fc; --bg: #07000f; --panel: #0e0018; --panel2: #130020; --border: #1e0030; }
+  body.theme-blood  { --work: #ff3b3b; --rest: #ff8c69; --bg: #0a0000; --panel: #140000; --panel2: #1a0000; --border: #280000; }
+  body.theme-matrix { --work: #00ff41; --rest: #00cc33; --bg: #000300; --panel: #000800; --panel2: #000b00; --border: #001a00; }
+
+  /* particle canvas */
+  #particleCanvas {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 98;
+    width: 100%; height: 100%;
+  }
+
+  /* GO explosion text */
+  .go-explosion {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 180px; color: var(--work);
+    opacity: 0; pointer-events: none; z-index: 97;
+    letter-spacing: 8px;
+    text-shadow: 0 0 60px var(--work), 0 0 120px var(--work);
+  }
+  .go-explosion.pop {
+    animation: goExplode 0.65s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+  @keyframes goExplode {
+    0%   { transform: translate(-50%,-50%) scale(0.2); opacity: 1; }
+    60%  { transform: translate(-50%,-50%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%,-50%) scale(1.5); opacity: 0; }
+  }
+
+  /* THEME SWATCHES */
+  .theme-row {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    padding: 4px 20px 4px;
+  }
+  .theme-swatch {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative; flex-shrink: 0;
+  }
+  .theme-swatch:hover { transform: scale(1.18); }
+  .theme-swatch.active { border-color: #fff; transform: scale(1.18); }
+  .theme-swatch-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .theme-swatch-label {
+    font-size: 8px; letter-spacing: 1px; color: var(--muted);
+    font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase;
+  }
+
+  /* Wake lock indicator */
+  .wakelock-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted); display: inline-block;
+    margin-right: 4px; transition: background 0.3s;
+  }
+  .wakelock-dot.active { background: #00ff41; box-shadow: 0 0 6px #00ff41; }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -503,6 +566,8 @@
 <div class="bg-ring"></div>
 <div class="bg-ring"></div>
 <div class="bg-ring"></div>
+<canvas id="particleCanvas"></canvas>
+<div class="go-explosion" id="goExplosion">GO</div>
 <div class="flash work-flash" id="flash"></div>
 <div class="notif" id="notif">GO !</div>
 
@@ -557,10 +622,14 @@
   </div>
 </div>
 
+<!-- THEME ROW -->
+<div class="theme-row" id="themeRow"></div>
+
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="logo">Sport Timer</div>
   <div class="topbar-right">
+    <span style="font-size:9px;letter-spacing:2px;color:var(--muted);font-family:Barlow Condensed,sans-serif;display:flex;align-items:center;"><span class="wakelock-dot" id="wakelockDot"></span>ÉCRAN</span>
     <button class="icon-btn" id="darkModeBtn">● SOMBRE</button>
     <button class="icon-btn" onclick="openPanel('programsPanel'); renderPrograms()">PROGRAMMES</button>
     <button class="icon-btn" onclick="openPanel('statsPanel'); renderStats()">STATS</button>
@@ -881,6 +950,7 @@ function finishSeries() {
   playDone();
   vibrate([100,50,100,50,300]);
   triggerFlash('work');
+  releaseWakeLock();
   showNotif('SESSION TERMINÉE !', 'done');
   phaseLabel.textContent = 'TERMINÉ 🎉';
   hintText.textContent = 'Appuie ESPACE pour recommencer';
@@ -967,6 +1037,7 @@ function startCountdown(callback) {
       playCountdownGo();
       vibrate([60, 30, 60]);
       triggerFlash('work');
+      triggerGoExplosion();
       countdownTimeout = setTimeout(() => {
         isCountingDown = false;
         callback();
@@ -999,6 +1070,7 @@ function toggleTimer() {
   if (!isRunning) {
     startCountdown(() => {
       isRunning = true;
+      requestWakeLock();
       startWork();
       interval = setInterval(tick, 1000);
     });
@@ -1068,6 +1140,7 @@ document.getElementById('customInput').addEventListener('keydown', e => {
 resetBtn.addEventListener('click', () => {
   if (isCountingDown) cancelCountdown();
   clearInterval(interval);
+  releaseWakeLock();
   isRunning = false; isRest = false;
   currentSeries = 1;
   document.body.classList.remove('rest-phase');
@@ -1233,19 +1306,157 @@ document.querySelectorAll('.panel-overlay').forEach(el => {
   });
 });
 
+
+// ─── WAKE LOCK ────────────────────────────────────────────────────────────────
+let wakeLock = null;
+const wakelockDot = document.getElementById('wakelockDot');
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakelockDot.classList.add('active');
+      wakeLock.addEventListener('release', () => {
+        wakelockDot.classList.remove('active');
+      });
+    }
+  } catch(e) {}
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) {
+    await wakeLock.release();
+    wakeLock = null;
+    wakelockDot.classList.remove('active');
+  }
+}
+
+// Re-acquire on visibility change (phone unlock)
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && isRunning) {
+    await requestWakeLock();
+  }
+});
+
+// ─── PARTICLES ────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('particleCanvas');
+const ctx2d = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function spawnParticles(x, y, color, count = 40) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 3 + Math.random() * 9;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 3,
+      alpha: 1,
+      size: 3 + Math.random() * 5,
+      color,
+      gravity: 0.25,
+      decay: 0.018 + Math.random() * 0.012
+    });
+  }
+}
+
+function spawnBurst(color) {
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  spawnParticles(cx, cy, color, 60);
+  // extra corner sparks
+  [[0.2,0.3],[0.8,0.3],[0.5,0.15]].forEach(([rx,ry]) =>
+    spawnParticles(cx + (rx-0.5)*400, cy + (ry-0.5)*400, color, 15)
+  );
+}
+
+function animateParticles() {
+  requestAnimationFrame(animateParticles);
+  ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+  particles = particles.filter(p => p.alpha > 0.01);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += p.gravity;
+    p.vx *= 0.98;
+    p.alpha -= p.decay;
+    ctx2d.save();
+    ctx2d.globalAlpha = p.alpha;
+    ctx2d.fillStyle = p.color;
+    ctx2d.beginPath();
+    ctx2d.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx2d.fill();
+    ctx2d.restore();
+  });
+}
+animateParticles();
+
+// GO explosion text
+const goExplosion = document.getElementById('goExplosion');
+function triggerGoExplosion() {
+  goExplosion.classList.remove('pop');
+  void goExplosion.offsetWidth;
+  goExplosion.classList.add('pop');
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--work').trim();
+  spawnBurst(color);
+  setTimeout(() => goExplosion.classList.remove('pop'), 700);
+}
+
+// ─── THEMES ──────────────────────────────────────────────────────────────────
+const THEMES = [
+  { id: 'default', label: 'ACID',   color: '#e8ff3b' },
+  { id: 'fire',    label: 'FIRE',   color: '#ff6b35' },
+  { id: 'ice',     label: 'ICE',    color: '#7dd3fc' },
+  { id: 'neon',    label: 'NEON',   color: '#f0abfc' },
+  { id: 'blood',   label: 'BLOOD',  color: '#ff3b3b' },
+  { id: 'matrix',  label: 'MTRX',   color: '#00ff41' },
+];
+
+let currentTheme = localStorage.getItem('sport_theme') || 'default';
+
+function applyTheme(id) {
+  THEMES.forEach(t => document.body.classList.remove('theme-' + t.id));
+  if (id !== 'default') document.body.classList.add('theme-' + id);
+  currentTheme = id;
+  localStorage.setItem('sport_theme', id);
+  document.querySelectorAll('.theme-swatch').forEach(s =>
+    s.classList.toggle('active', s.dataset.theme === id)
+  );
+}
+
+function buildThemeRow() {
+  const row = document.getElementById('themeRow');
+  row.innerHTML = THEMES.map(t => `
+    <div class="theme-swatch-wrap">
+      <div class="theme-swatch" data-theme="${t.id}"
+        style="background:${t.color}"
+        onclick="applyTheme('${t.id}')"></div>
+      <div class="theme-swatch-label">${t.label}</div>
+    </div>
+  `).join('');
+}
+
 // ─── INIT ────────────────────────────────────────────────────────────────────
 (function init() {
-  // dark mode
   if (localStorage.getItem('sport_dark') === '1') {
     darkMode = true;
     document.body.classList.add('dark-mode');
     darkBtn.classList.add('active-mode');
   }
+  buildThemeRow();
+  applyTheme(currentTheme);
   loadTodayHistory();
   updateProgress(timeLeft, totalTime);
   restInfoTime.textContent = formatTime(restDuration);
   updateRoundCounter();
   rebuildDots();
+  requestWakeLock();
 })();
 </script>
 </body>
