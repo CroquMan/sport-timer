@@ -1,0 +1,24 @@
+{
+  "name": "Sport Timer",
+  "short_name": "Sport Timer",
+  "description": "Timer de sport avec intervalles travail / repos",
+  "start_url": "/sport-timer/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230a0a0a'/%3E%3Ccircle cx='96' cy='96' r='72' fill='none' stroke='%23e8ff3b' stroke-width='8'/%3E%3Ctext x='96' y='116' font-family='Arial Black' font-size='52' font-weight='900' fill='%23e8ff3b' text-anchor='middle'%3EST%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230a0a0a'/%3E%3Ccircle cx='256' cy='256' r='200' fill='none' stroke='%23e8ff3b' stroke-width='16'/%3E%3Ctext x='256' y='308' font-family='Arial Black' font-size='140' font-weight='900' fill='%23e8ff3b' text-anchor='middle'%3EST%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

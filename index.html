@@ -2,1461 +2,1150 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a" id="themeColorMeta">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sport Timer">
+<link rel="manifest" href="manifest.json">
 <title>SPORT TIMER</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --work: #e8ff3b;
-    --rest: #3bffd4;
-    --bg: #0a0a0a;
-    --panel: #111;
-    --panel2: #161616;
-    --border: #222;
-    --text: #fff;
-    --muted: #555;
-    --danger: #ff3b3b;
-    --save: #a78bfa;
-  }
+:root {
+  --work: #e8ff3b;
+  --rest: #3bffd4;
+  --bg: #0a0a0a;
+  --panel: #131313;
+  --panel2: #1a1a1a;
+  --border: #252525;
+  --text: #ffffff;
+  --muted: #4a4a4a;
+  --danger: #ff3b3b;
+  --save: #a78bfa;
+  --glow: rgba(232,255,59,0.15);
+}
+body.theme-fire   { --work:#ff6b35;--rest:#ffd166;--bg:#0d0500;--panel:#180900;--panel2:#200c00;--border:#2e1500;--glow:rgba(255,107,53,0.15); }
+body.theme-ice    { --work:#7dd3fc;--rest:#bae6fd;--bg:#020d18;--panel:#041422;--panel2:#061a2e;--border:#0c2640;--glow:rgba(125,211,252,0.12); }
+body.theme-neon   { --work:#f0abfc;--rest:#a5f3fc;--bg:#07000f;--panel:#0e0020;--panel2:#140028;--border:#200038;--glow:rgba(240,171,252,0.12); }
+body.theme-blood  { --work:#ff3b3b;--rest:#ff8c69;--bg:#0a0000;--panel:#160000;--panel2:#1e0000;--border:#2c0000;--glow:rgba(255,59,59,0.15); }
+body.theme-matrix { --work:#00ff41;--rest:#00cc33;--bg:#000300;--panel:#000a00;--panel2:#001000;--border:#001e00;--glow:rgba(0,255,65,0.12); }
+body.dark-mode    { --work:#ffffff;--rest:#888;--bg:#000;--panel:#080808;--panel2:#0e0e0e;--border:#181818;--muted:#333;--glow:rgba(255,255,255,0.08); }
 
-  body.dark-mode {
-    --work: #fff;
-    --rest: #888;
-    --bg: #000;
-    --panel: #050505;
-    --panel2: #080808;
-    --border: #111;
-    --text: #fff;
-    --muted: #333;
-    --danger: #555;
-    --save: #444;
-  }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  position: relative;
+  transition: background 0.5s, color 0.5s;
+  padding-bottom: env(safe-area-inset-bottom);
+}
 
-  /* ── THEMES ── */
-  body.theme-fire   { --work: #ff6b35; --rest: #ffd166; --bg: #0d0500; --panel: #150800; --panel2: #1a0a00; --border: #2a1200; }
-  body.theme-ice    { --work: #7dd3fc; --rest: #e0f2fe; --bg: #020d18; --panel: #041220; --panel2: #051828; --border: #0a2540; }
-  body.theme-neon   { --work: #f0abfc; --rest: #a5f3fc; --bg: #07000f; --panel: #0e0018; --panel2: #130020; --border: #1e0030; }
-  body.theme-blood  { --work: #ff3b3b; --rest: #ff8c69; --bg: #0a0000; --panel: #140000; --panel2: #1a0000; --border: #280000; }
-  body.theme-matrix { --work: #00ff41; --rest: #00cc33; --bg: #000300; --panel: #000800; --panel2: #000b00; --border: #001a00; }
+/* ── ANIMATED BG ── */
+.bg-layer {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden;
+}
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0;
+  transition: opacity 1s, background 0.5s;
+}
+.bg-orb-1 {
+  width: 500px; height: 500px;
+  top: -100px; left: -100px;
+  background: var(--work);
+}
+.bg-orb-2 {
+  width: 400px; height: 400px;
+  bottom: -50px; right: -100px;
+  background: var(--work);
+  opacity: 0;
+}
+body.running .bg-orb-1 { opacity: 0.04; }
+body.running .bg-orb-2 { opacity: 0.03; }
+body.rest-phase .bg-orb-1 { background: var(--rest); opacity: 0.05; }
+body.rest-phase .bg-orb-2 { background: var(--rest); opacity: 0.03; }
 
-  /* particle canvas */
-  #particleCanvas {
-    position: fixed; inset: 0;
-    pointer-events: none; z-index: 98;
-    width: 100%; height: 100%;
-  }
+/* Noise grain */
+body::after {
+  content:''; position:fixed; inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:999; opacity:0.5;
+}
 
-  /* GO explosion text */
-  .go-explosion {
-    position: fixed; top: 50%; left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 180px; color: var(--work);
-    opacity: 0; pointer-events: none; z-index: 97;
-    letter-spacing: 8px;
-    text-shadow: 0 0 60px var(--work), 0 0 120px var(--work);
-  }
-  .go-explosion.pop {
-    animation: goExplode 0.65s cubic-bezier(0.22,1,0.36,1) forwards;
-  }
-  @keyframes goExplode {
-    0%   { transform: translate(-50%,-50%) scale(0.2); opacity: 1; }
-    60%  { transform: translate(-50%,-50%) scale(1.1); opacity: 1; }
-    100% { transform: translate(-50%,-50%) scale(1.5); opacity: 0; }
-  }
+/* ── CANVAS PARTICLES ── */
+#fx { position:fixed;inset:0;pointer-events:none;z-index:998;width:100%;height:100%; }
 
-  /* THEME SWATCHES */
-  .theme-row {
-    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-    padding: 4px 20px 4px;
-  }
-  .theme-swatch {
-    width: 28px; height: 28px; border-radius: 50%;
-    border: 2px solid transparent; cursor: pointer;
-    transition: transform 0.2s, border-color 0.2s;
-    position: relative; flex-shrink: 0;
-  }
-  .theme-swatch:hover { transform: scale(1.18); }
-  .theme-swatch.active { border-color: #fff; transform: scale(1.18); }
-  .theme-swatch-wrap {
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-  }
-  .theme-swatch-label {
-    font-size: 8px; letter-spacing: 1px; color: var(--muted);
-    font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase;
-  }
+/* ── GO EXPLOSION ── */
+.go-blast {
+  position:fixed; top:50%; left:50%;
+  transform:translate(-50%,-50%) scale(0);
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(120px,25vw,220px);
+  color:var(--work); opacity:0;
+  pointer-events:none; z-index:997;
+  letter-spacing:10px;
+  text-shadow:0 0 40px var(--work),0 0 100px var(--work);
+  will-change:transform,opacity;
+}
+.go-blast.fire {
+  animation: blastAnim 0.8s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+@keyframes blastAnim {
+  0%  { transform:translate(-50%,-50%) scale(0.1) rotate(-5deg); opacity:0.9; }
+  55% { transform:translate(-50%,-50%) scale(1.05) rotate(1deg); opacity:1; }
+  80% { opacity:0.7; }
+  100%{ transform:translate(-50%,-50%) scale(1.6) rotate(2deg); opacity:0; }
+}
 
-  /* Wake lock indicator */
-  .wakelock-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--muted); display: inline-block;
-    margin-right: 4px; transition: background 0.3s;
-  }
-  .wakelock-dot.active { background: #00ff41; box-shadow: 0 0 6px #00ff41; }
+/* ── PHASE TRANSITION WIPE ── */
+.phase-wipe {
+  position:fixed; inset:0;
+  pointer-events:none; z-index:996;
+  transform:scaleX(0); transform-origin:left;
+}
+.phase-wipe.work { background: var(--work); }
+.phase-wipe.rest { background: var(--rest); }
+.phase-wipe.animate {
+  animation: wipeAnim 0.5s cubic-bezier(0.76,0,0.24,1) forwards;
+}
+@keyframes wipeAnim {
+  0%  { transform:scaleX(0); transform-origin:left; opacity:0.2; }
+  50% { transform:scaleX(1); transform-origin:left; opacity:0.2; }
+  51% { transform:scaleX(1); transform-origin:right; opacity:0.2; }
+  100%{ transform:scaleX(0); transform-origin:right; opacity:0; }
+}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── TOPBAR ── */
+.topbar {
+  width:100%; max-width:560px;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:18px 20px 0;
+  position:relative; z-index:10;
+}
+.logo {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:11px; letter-spacing:6px; color:var(--muted);
+  display:flex; align-items:center; gap:8px;
+}
+.wakelock-dot {
+  width:5px;height:5px;border-radius:50%;
+  background:var(--muted); transition:background 0.4s,box-shadow 0.4s;
+  flex-shrink:0;
+}
+.wakelock-dot.on { background:#00ff41; box-shadow:0 0 8px #00ff41; }
+.topbar-right { display:flex; gap:8px; }
+.tbtn {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); font-family:'Bebas Neue',sans-serif;
+  font-size:10px; letter-spacing:2px; padding:5px 11px;
+  cursor:pointer; transition:all 0.2s;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.tbtn:hover { border-color:var(--work); color:var(--work); }
+.tbtn.on { background:var(--panel2); border-color:var(--muted); color:var(--text); }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Barlow Condensed', sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    overflow-x: hidden;
-    position: relative;
-    transition: background 0.4s;
-  }
+/* ── THEME ROW ── */
+.theme-strip {
+  display:flex; gap:8px; justify-content:center;
+  padding:14px 20px 0; position:relative; z-index:10;
+}
+.tsw-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.tsw {
+  width:26px; height:26px; border-radius:50%;
+  border:2px solid transparent; cursor:pointer;
+  transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s;
+}
+.tsw:hover { transform:scale(1.2); }
+.tsw.on { border-color:#fff; transform:scale(1.2); box-shadow:0 0 10px currentColor; }
+.tsw-lbl { font-size:7px;letter-spacing:1px;color:var(--muted);font-family:'Barlow Condensed',sans-serif; }
 
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 100;
-    opacity: 0.4;
-  }
+/* ── MAIN ── */
+.wrap {
+  display:flex; flex-direction:column; align-items:center;
+  gap:18px; width:100%; max-width:500px;
+  padding:16px 20px 30px; position:relative; z-index:10;
+}
 
-  .bg-ring {
-    position: fixed;
-    width: 600px; height: 600px;
-    border-radius: 50%;
-    border: 1px solid rgba(232,255,59,0.04);
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    transition: border-color 0.5s;
-  }
-  .bg-ring:nth-child(2) { width: 800px; height: 800px; border-color: rgba(232,255,59,0.03); }
-  .bg-ring:nth-child(3) { width: 1000px; height: 1000px; border-color: rgba(232,255,59,0.02); }
-  body.rest-phase .bg-ring { border-color: rgba(59,255,212,0.04); }
-  body.rest-phase .bg-ring:nth-child(2) { border-color: rgba(59,255,212,0.03); }
-  body.rest-phase .bg-ring:nth-child(3) { border-color: rgba(59,255,212,0.02); }
-  body.dark-mode .bg-ring, body.dark-mode.rest-phase .bg-ring { border-color: rgba(255,255,255,0.02); }
+/* ── PHASE LABEL ── */
+.phase-lbl {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:16px; letter-spacing:5px;
+  color:var(--work); min-height:22px; text-align:center;
+  transition:color 0.4s;
+  will-change:transform;
+}
+body.rest-phase .phase-lbl { color:var(--rest); }
 
-  /* TOP BAR */
-  .topbar {
-    width: 100%;
-    max-width: 620px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 18px 20px 0;
-    position: relative;
-    z-index: 2;
-  }
+/* ── TIMER RING ── */
+.ring-wrap {
+  position:relative; width:clamp(240px,70vw,300px);
+  height:clamp(240px,70vw,300px);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  filter:drop-shadow(0 0 30px var(--glow));
+  transition:filter 0.5s;
+}
+body.running .ring-wrap { filter:drop-shadow(0 0 50px var(--glow)); }
+.ring-svg { position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg); }
+.ring-bg { fill:none; stroke:var(--border); stroke-width:3; }
+.ring-fill {
+  fill:none; stroke:var(--work); stroke-width:3.5; stroke-linecap:round;
+  transition:stroke-dashoffset 0.3s linear, stroke 0.5s;
+  filter:drop-shadow(0 0 6px var(--work));
+}
+body.rest-phase .ring-fill { stroke:var(--rest); filter:drop-shadow(0 0 6px var(--rest)); }
 
-  .logo {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 13px;
-    letter-spacing: 6px;
-    color: var(--muted);
-  }
+/* inner glow ring */
+.ring-inner-glow {
+  fill:none; stroke:var(--work); stroke-width:0.5; opacity:0.2;
+  transition:stroke 0.5s;
+}
+body.rest-phase .ring-inner-glow { stroke:var(--rest); }
 
-  .topbar-right {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
+.ring-inner { display:flex;flex-direction:column;align-items:center;gap:2px; }
 
-  .icon-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 11px;
-    letter-spacing: 2px;
-    padding: 5px 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-  }
+.time-num {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(64px,18vw,84px); line-height:1;
+  letter-spacing:2px; color:var(--text);
+  transition:color 0.4s; user-select:none;
+  will-change:transform;
+}
+body.rest-phase .time-num { color:var(--rest); }
+.time-num.work-col { color:var(--work); }
 
-  .icon-btn:hover { border-color: var(--work); color: var(--work); }
-  .icon-btn.active-mode { border-color: var(--muted); color: var(--text); background: var(--panel); }
+/* tick animation on each second */
+@keyframes tickPop { 0%{transform:scale(1)} 15%{transform:scale(1.04)} 100%{transform:scale(1)} }
+.tick-anim { animation:tickPop 0.15s ease-out; }
 
-  /* MAIN WRAPPER */
-  .wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 520px;
-    padding: 14px 20px 30px;
-  }
+.serie-badge {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:13px; letter-spacing:3px; color:var(--muted);
+}
+.serie-badge em { color:var(--work); font-style:normal; transition:color 0.4s; }
+body.rest-phase .serie-badge em { color:var(--rest); }
 
-  .phase-label {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 18px;
-    letter-spacing: 4px;
-    color: var(--work);
-    transition: color 0.4s;
-    min-height: 24px;
-    text-align: center;
-  }
-  body.rest-phase .phase-label { color: var(--rest); }
+/* ── COUNTDOWN BIG ── */
+.cd-big {
+  position:absolute; font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(90px,22vw,130px); color:var(--work);
+  opacity:0; pointer-events:none; letter-spacing:4px;
+  text-shadow:0 0 30px var(--work);
+  will-change:transform,opacity;
+}
+.cd-big.show {
+  animation:cdPop 0.45s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+@keyframes cdPop {
+  0%  { transform:scale(1.4); opacity:0; }
+  30% { opacity:1; }
+  100%{ transform:scale(0.85); opacity:1; }
+}
+.cd-big.out {
+  animation:cdOut 0.2s ease-in forwards;
+}
+@keyframes cdOut { to { transform:scale(0.5); opacity:0; } }
 
-  /* TIMER */
-  .timer-container {
-    position: relative;
-    width: 280px; height: 280px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
+/* ── SERIES SELECTOR ── */
+.series-row {
+  display:flex; align-items:center; gap:10px;
+  background:var(--panel); border:1px solid var(--border);
+  padding:8px 18px;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+}
+.s-lbl { font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase; }
+.s-btn {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); font-family:'Bebas Neue',sans-serif;
+  font-size:18px; width:30px; height:30px;
+  cursor:pointer; transition:all 0.2s;
+  display:flex; align-items:center; justify-content:center;
+}
+.s-btn:hover { border-color:var(--work); color:var(--work); }
+.s-val { font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;min-width:32px;text-align:center; }
+.s-unit { font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase; }
 
-  .progress-svg {
-    position: absolute;
-    inset: 0; width: 100%; height: 100%;
-    transform: rotate(-90deg);
-  }
+/* ── PRESETS ── */
+.presets { display:flex;gap:8px;flex-wrap:wrap;justify-content:center; }
+.pbtn {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); font-family:'Bebas Neue',sans-serif;
+  font-size:14px; letter-spacing:2px; padding:8px 14px;
+  cursor:pointer; transition:all 0.2s;
+  clip-path:polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%);
+  position:relative; overflow:hidden;
+}
+.pbtn::before {
+  content:''; position:absolute; inset:0;
+  background:var(--work); transform:scaleX(0); transform-origin:left;
+  transition:transform 0.2s; z-index:-1; opacity:0.15;
+}
+.pbtn:hover::before { transform:scaleX(1); }
+.pbtn:hover { border-color:var(--work); color:var(--work); }
+.pbtn.on { background:var(--work); border-color:var(--work); color:#000; }
 
-  .progress-track { fill: none; stroke: var(--border); stroke-width: 4; }
-  .progress-fill {
-    fill: none; stroke: var(--work); stroke-width: 4; stroke-linecap: round;
-    transition: stroke-dashoffset 0.25s linear, stroke 0.4s;
-  }
-  body.rest-phase .progress-fill { stroke: var(--rest); }
+/* ── CUSTOM ── */
+.custom-row { display:flex;align-items:center;gap:8px;justify-content:center; }
+.c-lbl { font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase; }
+.c-in {
+  background:var(--panel); border:1px solid var(--border);
+  color:var(--text); font-family:'Bebas Neue',sans-serif;
+  font-size:18px; letter-spacing:2px; padding:6px 12px;
+  width:68px; text-align:center; outline:none;
+  transition:border-color 0.2s;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.c-in:focus { border-color:var(--work); }
+.c-in::placeholder { color:var(--muted); }
+.c-ok {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); font-family:'Bebas Neue',sans-serif;
+  font-size:12px; letter-spacing:2px; padding:7px 14px;
+  cursor:pointer; transition:all 0.2s;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.c-ok:hover { border-color:var(--work); color:var(--work); }
 
-  .timer-inner { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* ── REST INFO ── */
+.rest-strip {
+  display:flex; align-items:center; gap:6px;
+  background:var(--panel); border:1px solid var(--border);
+  padding:7px 18px;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  transition:border-color 0.4s;
+}
+body.rest-phase .rest-strip { border-color:var(--rest); }
+.rest-dot { width:5px;height:5px;border-radius:50%;background:var(--rest);flex-shrink:0; }
+.rest-txt { font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase; }
+.rest-val { font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--rest);letter-spacing:2px;margin-left:4px; }
 
-  .time-display {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 76px; line-height: 1;
-    letter-spacing: 2px;
-    color: var(--text);
-    transition: color 0.4s;
-    user-select: none;
-  }
-  body.rest-phase .time-display { color: var(--rest); }
-  .time-display.work-active { color: var(--work); }
+/* ── DOTS ── */
+.dots-row { display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:320px;min-height:14px; }
+.dot {
+  width:7px;height:7px;border-radius:1px;
+  background:var(--border); transform:rotate(45deg);
+  transition:background 0.35s, box-shadow 0.35s, transform 0.35s;
+}
+.dot.done { background:var(--work); }
+.dot.active {
+  background:var(--work); box-shadow:0 0 8px var(--work);
+  transform:rotate(45deg) scale(1.3);
+}
+body.rest-phase .dot.active { background:var(--rest); box-shadow:0 0 8px var(--rest); }
 
-  .round-counter {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 15px; letter-spacing: 3px;
-    color: var(--muted);
-  }
+/* ── TOTAL STRIP ── */
+.total-bar {
+  display:flex; gap:0; width:100%;
+  background:var(--panel); border:1px solid var(--border);
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  overflow:hidden;
+}
+.t-item {
+  flex:1; padding:10px 8px; text-align:center;
+  border-right:1px solid var(--border);
+  transition:background 0.3s;
+}
+.t-item:last-child { border-right:none; }
+body.running .t-item:first-child { background:rgba(255,255,255,0.02); }
+.t-val { font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--work); }
+.t-lbl { font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:1px; }
 
-  .round-counter span { color: var(--work); }
-  body.rest-phase .round-counter span { color: var(--rest); }
+/* ── SPACE KEY ── */
+.space-wrap { display:flex;flex-direction:column;align-items:center;gap:7px; }
+.space-key {
+  background:var(--panel); border:1px solid var(--border);
+  border-bottom:3px solid var(--border);
+  padding:6px 30px; font-size:9px; letter-spacing:4px;
+  color:var(--muted); text-transform:uppercase;
+  transition:all 0.1s, border-color 0.3s;
+  user-select:none; cursor:pointer;
+}
+.space-key:hover { border-color:var(--work); color:var(--work); }
+.space-key.press { border-bottom-width:1px; transform:translateY(2px); background:var(--panel2); }
+.hint { font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;text-align:center; }
 
-  /* SERIES INPUT */
-  .series-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    padding: 8px 16px;
-    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-  }
+/* ── BOTTOM ACTIONS ── */
+.actions { display:flex;gap:10px; }
+.act-btn {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); font-family:'Bebas Neue',sans-serif;
+  font-size:11px; letter-spacing:3px; padding:6px 16px;
+  cursor:pointer; transition:all 0.2s;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.act-btn:hover { border-color:var(--danger); color:var(--danger); }
 
-  .series-label {
-    font-size: 11px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase;
-  }
+/* ── FLASH ── */
+.flash {
+  position:fixed;inset:0;pointer-events:none;z-index:995;
+  opacity:0; transition:opacity 0.08s;
+}
+.flash.work { background:var(--work); }
+.flash.rest { background:var(--rest); }
+.flash.hit { opacity:0.1; }
 
-  .series-minus, .series-plus {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
-    font-size: 16px; width: 28px; height: 28px;
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .series-minus:hover, .series-plus:hover { border-color: var(--work); color: var(--work); }
+/* ── NOTIF ── */
+.notif {
+  position:fixed; top:20px; left:50%;
+  transform:translateX(-50%) translateY(-70px);
+  background:var(--work); color:#000;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:12px; letter-spacing:4px;
+  padding:9px 26px;
+  clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+  transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  z-index:1000; white-space:nowrap;
+}
+.notif.show { transform:translateX(-50%) translateY(0); }
+.notif.rest { background:var(--rest); }
+.notif.done { background:var(--save); color:#fff; }
 
-  .series-val {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px; letter-spacing: 2px; color: var(--text);
-    min-width: 30px; text-align: center;
-  }
+/* ── PANELS ── */
+.overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.88);
+  z-index:900; display:none; align-items:center; justify-content:center;
+  backdrop-filter:blur(6px);
+}
+.overlay.open { display:flex; }
+.pbox {
+  background:var(--panel); border:1px solid var(--border);
+  width:100%; max-width:460px; max-height:88vh;
+  overflow-y:auto; margin:16px;
+  clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+  animation:panelIn 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes panelIn {
+  from { transform:translateY(20px); opacity:0; }
+  to   { transform:translateY(0);    opacity:1; }
+}
+.pbox::-webkit-scrollbar { width:3px; }
+.pbox::-webkit-scrollbar-thumb { background:var(--border); }
+.phdr {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:15px 20px; border-bottom:1px solid var(--border);
+  position:sticky; top:0; background:var(--panel); z-index:1;
+}
+.ptitle { font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:4px; }
+.pclose {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); font-family:'Bebas Neue',sans-serif;
+  font-size:11px;letter-spacing:2px;padding:4px 12px;cursor:pointer;transition:all 0.2s;
+}
+.pclose:hover { border-color:var(--danger);color:var(--danger); }
+.pbody { padding:18px 20px; }
 
-  .series-unit {
-    font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase;
-  }
+/* programs */
+.save-row { display:flex;gap:8px;margin-bottom:18px; }
+.s-name {
+  background:var(--panel2); border:1px solid var(--border);
+  color:var(--text); font-family:'Barlow Condensed',sans-serif;
+  font-size:14px; letter-spacing:1px; padding:8px 14px;
+  flex:1; outline:none; transition:border-color 0.2s;
+}
+.s-name:focus { border-color:var(--save); }
+.s-name::placeholder { color:var(--muted); }
+.s-save {
+  background:var(--save); border:none; color:#000;
+  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:2px;
+  padding:8px 18px;cursor:pointer;transition:opacity 0.2s;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.s-save:hover { opacity:0.8; }
+.prog-list { display:flex;flex-direction:column;gap:7px; }
+.prog-item {
+  display:flex;align-items:center;gap:8px;
+  background:var(--panel2); border:1px solid var(--border);
+  padding:10px 14px; transition:border-color 0.2s;
+}
+.prog-item:hover { border-color:var(--save); }
+.pi-info { flex:1; }
+.pi-name { font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px; }
+.pi-det { font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:2px; }
+.pi-load,.pi-del {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); font-family:'Bebas Neue',sans-serif;
+  font-size:10px;letter-spacing:2px;padding:4px 10px;cursor:pointer;transition:all 0.2s;
+}
+.pi-load:hover { border-color:var(--save);color:var(--save); }
+.pi-del:hover { border-color:var(--danger);color:var(--danger); }
+.empty { text-align:center;padding:28px;font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase; }
 
-  /* PRESETS */
-  .presets { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+/* stats */
+.stat-sec { margin-bottom:22px; }
+.stat-sec-ttl {
+  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;
+  color:var(--muted);margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border);
+}
+.stat-cards { display:flex;gap:10px;margin-bottom:14px; }
+.sc {
+  flex:1; background:var(--panel2); border:1px solid var(--border);
+  padding:12px 8px; text-align:center;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.sc-v { font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;color:var(--work); }
+.sc-l { font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:2px; }
+.hist-list { display:flex;flex-direction:column;gap:6px; }
+.hi {
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 14px; background:var(--panel2); border:1px solid var(--border);
+}
+.hi-l { display:flex;flex-direction:column;gap:2px; }
+.hi-t { font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:2px;color:var(--muted); }
+.hi-d { font-size:12px;letter-spacing:1px; }
+.hi-r { font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:var(--work); }
+.clr-btn {
+  background:transparent; border:1px solid var(--border);
+  color:var(--muted); font-family:'Bebas Neue',sans-serif;
+  font-size:10px;letter-spacing:2px;padding:5px 14px;cursor:pointer;
+  transition:all 0.2s; margin-top:10px;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.clr-btn:hover { border-color:var(--danger);color:var(--danger); }
 
-  .preset-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 15px; letter-spacing: 2px;
-    padding: 8px 14px; cursor: pointer;
-    transition: all 0.2s;
-    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
-  }
-  .preset-btn:hover { border-color: var(--work); color: var(--work); }
-  .preset-btn.active { background: var(--work); border-color: var(--work); color: #000; }
-  body.rest-phase .preset-btn.active { background: var(--rest); border-color: var(--rest); }
+/* animations */
+@keyframes pulsate { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+.pulse { animation:pulsate 0.55s ease-in-out infinite; }
+@keyframes completePop { 0%{transform:scale(1)} 40%{transform:scale(1.1)} 100%{transform:scale(1)} }
+.cpop { animation:completePop 0.5s ease; }
 
-  /* CUSTOM */
-  .custom-row {
-    display: flex; align-items: center; gap: 8px;
-    width: 100%; justify-content: center;
-  }
-
-  .custom-label { font-size: 11px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
-
-  .custom-input {
-    background: var(--panel); border: 1px solid var(--border);
-    color: var(--text); font-family: 'Bebas Neue', sans-serif;
-    font-size: 18px; letter-spacing: 2px;
-    padding: 6px 12px; width: 70px; text-align: center; outline: none;
-    transition: border-color 0.2s;
-    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-  }
-  .custom-input:focus { border-color: var(--work); }
-  .custom-input::placeholder { color: var(--muted); }
-
-  .custom-set-btn {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
-    font-size: 13px; letter-spacing: 2px;
-    padding: 7px 14px; cursor: pointer; transition: all 0.2s;
-    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-  }
-  .custom-set-btn:hover { border-color: var(--work); color: var(--work); }
-
-  /* REST INFO */
-  .rest-info {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
-    padding: 7px 16px;
-    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-  }
-  .rest-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rest); flex-shrink: 0; }
-  .rest-info-text { font-size: 12px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
-  .rest-info-time { font-family: 'Bebas Neue', sans-serif; font-size: 14px; color: var(--rest); letter-spacing: 2px; margin-left: 4px; }
-
-  /* ROUNDS DOTS */
-  .rounds-display {
-    display: flex; gap: 6px; flex-wrap: wrap;
-    justify-content: center; max-width: 320px; min-height: 16px;
-  }
-  .round-dot {
-    width: 8px; height: 8px; border-radius: 1px;
-    background: var(--border); transition: background 0.3s, box-shadow 0.3s;
-    transform: rotate(45deg);
-  }
-  .round-dot.done { background: var(--work); }
-  .round-dot.active { background: var(--work); box-shadow: 0 0 6px var(--work); }
-  body.rest-phase .round-dot.active { background: var(--rest); box-shadow: 0 0 6px var(--rest); }
-
-  /* SPACE KEY */
-  .spacebar-hint { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .key {
-    background: var(--panel); border: 1px solid var(--border);
-    border-bottom: 3px solid var(--border);
-    padding: 6px 28px; font-size: 10px; letter-spacing: 3px;
-    color: var(--muted); text-transform: uppercase; transition: all 0.1s;
-  }
-  .key.pressed { border-bottom-width: 1px; transform: translateY(2px); background: var(--panel2); }
-  .hint-text { font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
-
-  /* BOTTOM ACTIONS */
-  .bottom-actions { display: flex; gap: 10px; align-items: center; }
-
-  .reset-btn {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
-    font-size: 12px; letter-spacing: 3px;
-    padding: 6px 16px; cursor: pointer; transition: all 0.2s;
-    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-  }
-  .reset-btn:hover { border-color: var(--danger); color: var(--danger); }
-
-  .stats-btn {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
-    font-size: 12px; letter-spacing: 3px;
-    padding: 6px 16px; cursor: pointer; transition: all 0.2s;
-    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-  }
-  .stats-btn:hover { border-color: var(--save); color: var(--save); }
-
-  /* TOTAL WORK STRIP */
-  .total-strip {
-    display: flex; gap: 20px; align-items: center;
-    background: var(--panel); border: 1px solid var(--border);
-    padding: 8px 20px; width: 100%;
-    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-  }
-  .total-item { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
-  .total-val { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--work); }
-  .total-label { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
-
-  /* FLASH & NOTIF */
-  .flash {
-    position: fixed; inset: 0; pointer-events: none;
-    z-index: 99; opacity: 0; transition: opacity 0.1s;
-  }
-  .flash.work-flash { background: var(--work); }
-  .flash.rest-flash { background: var(--rest); }
-  .flash.trigger { opacity: 0.12; }
-
-  .notif {
-    position: fixed; top: 24px; left: 50%;
-    transform: translateX(-50%) translateY(-60px);
-    background: var(--work); color: #000;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 13px; letter-spacing: 4px;
-    padding: 8px 24px;
-    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    z-index: 200; white-space: nowrap;
-  }
-  .notif.show { transform: translateX(-50%) translateY(0); }
-  .notif.rest { background: var(--rest); }
-  .notif.done { background: var(--save); color: #fff; }
-
-  /* PANELS OVERLAY */
-  .panel-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
-    z-index: 300; display: none;
-    align-items: center; justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-  .panel-overlay.open { display: flex; }
-
-  .panel-box {
-    background: var(--panel); border: 1px solid var(--border);
-    width: 100%; max-width: 480px; max-height: 85vh;
-    overflow-y: auto; margin: 20px;
-    clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
-  }
-
-  .panel-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 20px; border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: var(--panel); z-index: 1;
-  }
-  .panel-title {
-    font-family: 'Bebas Neue', sans-serif; font-size: 18px;
-    letter-spacing: 4px; color: var(--text);
-  }
-  .panel-close {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
-    font-size: 12px; letter-spacing: 2px; padding: 4px 12px;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .panel-close:hover { border-color: var(--danger); color: var(--danger); }
-
-  .panel-body { padding: 20px; }
-
-  /* SAVE PROGRAM */
-  .save-row {
-    display: flex; gap: 8px; align-items: center; margin-bottom: 20px;
-  }
-  .save-input {
-    background: var(--panel2); border: 1px solid var(--border);
-    color: var(--text); font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px; letter-spacing: 1px; padding: 8px 14px;
-    flex: 1; outline: none; transition: border-color 0.2s;
-  }
-  .save-input:focus { border-color: var(--save); }
-  .save-input::placeholder { color: var(--muted); }
-  .save-go-btn {
-    background: var(--save); border: none; color: #000;
-    font-family: 'Bebas Neue', sans-serif; font-size: 14px;
-    letter-spacing: 2px; padding: 8px 20px; cursor: pointer;
-    transition: opacity 0.2s; clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-  }
-  .save-go-btn:hover { opacity: 0.8; }
-
-  .programs-list { display: flex; flex-direction: column; gap: 8px; }
-  .program-item {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--panel2); border: 1px solid var(--border);
-    padding: 10px 14px; cursor: pointer; transition: border-color 0.2s;
-  }
-  .program-item:hover { border-color: var(--save); }
-  .program-info { flex: 1; }
-  .program-name {
-    font-family: 'Bebas Neue', sans-serif; font-size: 15px;
-    letter-spacing: 2px; color: var(--text);
-  }
-  .program-details { font-size: 11px; letter-spacing: 2px; color: var(--muted); margin-top: 2px; }
-  .program-load {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
-    font-size: 11px; letter-spacing: 2px; padding: 4px 10px;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .program-load:hover { border-color: var(--save); color: var(--save); }
-  .program-del {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
-    font-size: 11px; letter-spacing: 2px; padding: 4px 10px;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .program-del:hover { border-color: var(--danger); color: var(--danger); }
-
-  .empty-state {
-    text-align: center; padding: 30px;
-    font-size: 12px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase;
-  }
-
-  /* STATS PANEL */
-  .stats-section { margin-bottom: 24px; }
-  .stats-section-title {
-    font-family: 'Bebas Neue', sans-serif; font-size: 14px;
-    letter-spacing: 3px; color: var(--muted); margin-bottom: 12px;
-    padding-bottom: 6px; border-bottom: 1px solid var(--border);
-  }
-
-  .stat-big {
-    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
-  }
-  .stat-card {
-    flex: 1; min-width: 80px;
-    background: var(--panel2); border: 1px solid var(--border);
-    padding: 12px; text-align: center;
-    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-  }
-  .stat-card-val {
-    font-family: 'Bebas Neue', sans-serif; font-size: 28px;
-    letter-spacing: 2px; color: var(--work);
-  }
-  .stat-card-label { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
-
-  .history-list { display: flex; flex-direction: column; gap: 6px; }
-  .history-item {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 14px; background: var(--panel2); border: 1px solid var(--border);
-  }
-  .history-left { display: flex; flex-direction: column; gap: 2px; }
-  .history-time { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 2px; color: var(--muted); }
-  .history-desc { font-size: 13px; letter-spacing: 1px; color: var(--text); }
-  .history-right { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--work); }
-
-  .clear-hist-btn {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
-    font-size: 11px; letter-spacing: 2px; padding: 5px 14px;
-    cursor: pointer; transition: all 0.2s; margin-top: 10px;
-    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-  }
-  .clear-hist-btn:hover { border-color: var(--danger); color: var(--danger); }
-
-  /* Animations */
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .pulsing { animation: pulse 0.6s ease-in-out infinite; }
-
-  @keyframes complete-pop { 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
-  .complete-pop { animation: complete-pop 0.4s ease; }
-
-  /* Scrollbar */
-  .panel-box::-webkit-scrollbar { width: 4px; }
-  .panel-box::-webkit-scrollbar-track { background: var(--panel); }
-  .panel-box::-webkit-scrollbar-thumb { background: var(--border); }
+/* entrance */
+@keyframes fadeSlide { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+.wrap > * { animation:fadeSlide 0.5s ease both; }
+.wrap > *:nth-child(1){animation-delay:0.05s}
+.wrap > *:nth-child(2){animation-delay:0.1s}
+.wrap > *:nth-child(3){animation-delay:0.15s}
+.wrap > *:nth-child(4){animation-delay:0.2s}
+.wrap > *:nth-child(5){animation-delay:0.25s}
+.wrap > *:nth-child(6){animation-delay:0.3s}
+.wrap > *:nth-child(7){animation-delay:0.35s}
+.wrap > *:nth-child(8){animation-delay:0.4s}
+.wrap > *:nth-child(9){animation-delay:0.45s}
 </style>
 </head>
 <body>
 
-<div class="bg-ring"></div>
-<div class="bg-ring"></div>
-<div class="bg-ring"></div>
-<canvas id="particleCanvas"></canvas>
-<div class="go-explosion" id="goExplosion">GO</div>
-<div class="flash work-flash" id="flash"></div>
-<div class="notif" id="notif">GO !</div>
+<!-- BG -->
+<div class="bg-layer">
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+</div>
 
-<!-- SAVE PROGRAMS PANEL -->
-<div class="panel-overlay" id="programsPanel">
-  <div class="panel-box">
-    <div class="panel-header">
-      <span class="panel-title">PROGRAMMES</span>
-      <button class="panel-close" onclick="closePanel('programsPanel')">✕ FERMER</button>
+<canvas id="fx"></canvas>
+<div class="go-blast" id="goBlast">GO</div>
+<div class="phase-wipe" id="wipeWork"></div>
+<div class="phase-wipe rest" id="wipeRest"></div>
+<div class="flash work" id="flash"></div>
+<div class="notif" id="notif"></div>
+
+<!-- PROGRAMS PANEL -->
+<div class="overlay" id="pgPanel">
+  <div class="pbox">
+    <div class="phdr">
+      <span class="ptitle">PROGRAMMES</span>
+      <button class="pclose" onclick="closePanel('pgPanel')">✕ FERMER</button>
     </div>
-    <div class="panel-body">
+    <div class="pbody">
       <div class="save-row">
-        <input class="save-input" id="programNameInput" placeholder="Nom du programme…" maxlength="30">
-        <button class="save-go-btn" id="saveProgramBtn">SAVE</button>
+        <input class="s-name" id="pgName" placeholder="Nom du programme…" maxlength="30">
+        <button class="s-save" id="pgSaveBtn">SAVE</button>
       </div>
-      <div class="programs-list" id="programsList"></div>
+      <div class="prog-list" id="pgList"></div>
     </div>
   </div>
 </div>
 
-<!-- STATS & HISTORY PANEL -->
-<div class="panel-overlay" id="statsPanel">
-  <div class="panel-box">
-    <div class="panel-header">
-      <span class="panel-title">STATS DU JOUR</span>
-      <button class="panel-close" onclick="closePanel('statsPanel')">✕ FERMER</button>
+<!-- STATS PANEL -->
+<div class="overlay" id="stPanel">
+  <div class="pbox">
+    <div class="phdr">
+      <span class="ptitle">STATS DU JOUR</span>
+      <button class="pclose" onclick="closePanel('stPanel')">✕ FERMER</button>
     </div>
-    <div class="panel-body">
-      <div class="stats-section">
-        <div class="stats-section-title">SESSION EN COURS</div>
-        <div class="stat-big">
-          <div class="stat-card">
-            <div class="stat-card-val" id="statTotalWork">0:00</div>
-            <div class="stat-card-label">Temps travail</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-val" id="statRounds">0</div>
-            <div class="stat-card-label">Rounds</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-val" id="statSeries">0</div>
-            <div class="stat-card-label">Séries</div>
-          </div>
+    <div class="pbody">
+      <div class="stat-sec">
+        <div class="stat-sec-ttl">SESSION EN COURS</div>
+        <div class="stat-cards">
+          <div class="sc"><div class="sc-v" id="stWork">0:00</div><div class="sc-l">Travail</div></div>
+          <div class="sc"><div class="sc-v" id="stRounds">0</div><div class="sc-l">Rounds</div></div>
+          <div class="sc"><div class="sc-v" id="stSeries">0</div><div class="sc-l">Séries</div></div>
         </div>
       </div>
-      <div class="stats-section">
-        <div class="stats-section-title">HISTORIQUE DU JOUR</div>
-        <div class="history-list" id="historyList"></div>
-        <button class="clear-hist-btn" id="clearHistBtn">EFFACER L'HISTORIQUE</button>
+      <div class="stat-sec">
+        <div class="stat-sec-ttl">HISTORIQUE DU JOUR</div>
+        <div class="hist-list" id="histList"></div>
+        <button class="clr-btn" id="clrHist">EFFACER</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- THEME ROW -->
-<div class="theme-row" id="themeRow"></div>
-
-<!-- TOP BAR -->
+<!-- TOPBAR -->
 <div class="topbar">
-  <div class="logo">Sport Timer</div>
+  <div class="logo">
+    <span class="wakelock-dot" id="wlDot"></span>
+    SPORT TIMER
+  </div>
   <div class="topbar-right">
-    <span style="font-size:9px;letter-spacing:2px;color:var(--muted);font-family:Barlow Condensed,sans-serif;display:flex;align-items:center;"><span class="wakelock-dot" id="wakelockDot"></span>ÉCRAN</span>
-    <button class="icon-btn" id="darkModeBtn">● SOMBRE</button>
-    <button class="icon-btn" onclick="openPanel('programsPanel'); renderPrograms()">PROGRAMMES</button>
-    <button class="icon-btn" onclick="openPanel('statsPanel'); renderStats()">STATS</button>
+    <button class="tbtn" id="darkBtn">SOMBRE</button>
+    <button class="tbtn" onclick="openPanel('pgPanel');renderProgs()">PROG</button>
+    <button class="tbtn" onclick="openPanel('stPanel');renderStats()">STATS</button>
   </div>
 </div>
 
-<div class="wrapper">
-  <div class="phase-label" id="phaseLabel">PRÊT</div>
+<!-- THEME STRIP -->
+<div class="theme-strip" id="themeStrip"></div>
 
-  <div class="timer-container" id="timerContainer">
-    <svg class="progress-svg" viewBox="0 0 300 300">
-      <circle class="progress-track" cx="150" cy="150" r="140"/>
-      <circle class="progress-fill" id="progressFill" cx="150" cy="150" r="140"/>
+<!-- MAIN -->
+<div class="wrap">
+  <div class="phase-lbl" id="phaseLbl">PRÊT</div>
+
+  <div class="ring-wrap" id="ringWrap">
+    <svg class="ring-svg" viewBox="0 0 300 300">
+      <circle class="ring-bg" cx="150" cy="150" r="138"/>
+      <circle class="ring-inner-glow" cx="150" cy="150" r="126"/>
+      <circle class="ring-fill" id="ringFill" cx="150" cy="150" r="138"/>
     </svg>
-    <div class="timer-inner">
-      <div class="time-display" id="timeDisplay">1:00</div>
-      <div class="round-counter" id="roundCounter">SÉRIE <span id="rcCurrent">1</span> / <span id="rcTotal">1</span></div>
+    <div class="ring-inner">
+      <div class="time-num" id="timeNum">1:00</div>
+      <div class="serie-badge">SÉRIE <em id="sc">1</em> / <em id="st">1</em></div>
     </div>
+    <div class="cd-big" id="cdBig"></div>
   </div>
 
-  <!-- SÉRIES -->
   <div class="series-row">
-    <span class="series-label">Séries</span>
-    <button class="series-minus" id="seriesMinus">−</button>
-    <span class="series-val" id="seriesVal">1</span>
-    <button class="series-plus" id="seriesPlus">+</button>
-    <span class="series-unit">série(s)</span>
+    <span class="s-lbl">Séries</span>
+    <button class="s-btn" id="sMinus">−</button>
+    <span class="s-val" id="sVal">1</span>
+    <button class="s-btn" id="sPlus">+</button>
+    <span class="s-unit">série(s)</span>
   </div>
 
-  <!-- DURÉE TRAVAIL -->
   <div class="presets">
-    <button class="preset-btn active" data-min="1">1 MIN</button>
-    <button class="preset-btn" data-min="2">2 MIN</button>
-    <button class="preset-btn" data-min="5">5 MIN</button>
-    <button class="preset-btn" data-min="10">10 MIN</button>
+    <button class="pbtn on" data-m="1">1 MIN</button>
+    <button class="pbtn" data-m="2">2 MIN</button>
+    <button class="pbtn" data-m="5">5 MIN</button>
+    <button class="pbtn" data-m="10">10 MIN</button>
   </div>
 
   <div class="custom-row">
-    <span class="custom-label">Perso</span>
-    <input class="custom-input" type="number" id="customInput" min="1" max="60" placeholder="MIN">
-    <button class="custom-set-btn" id="customSetBtn">OK</button>
+    <span class="c-lbl">Perso</span>
+    <input class="c-in" type="number" id="cIn" min="1" max="60" placeholder="MIN">
+    <button class="c-ok" id="cOk">OK</button>
   </div>
 
-  <div class="rest-info">
+  <div class="rest-strip">
     <div class="rest-dot"></div>
-    <span class="rest-info-text">Repos :</span>
-    <span class="rest-info-time" id="restInfoTime">20 sec</span>
+    <span class="rest-txt">Repos :</span>
+    <span class="rest-val" id="restVal">20 sec</span>
   </div>
 
-  <!-- DOTS -->
-  <div class="rounds-display" id="roundsDots"></div>
+  <div class="dots-row" id="dotsRow"></div>
 
-  <!-- TOTAL STRIP -->
-  <div class="total-strip">
-    <div class="total-item">
-      <div class="total-val" id="totalWorkDisplay">0:00</div>
-      <div class="total-label">Travail total</div>
-    </div>
-    <div class="total-item">
-      <div class="total-val" id="completedSeriesDisplay">0</div>
-      <div class="total-label">Séries faites</div>
-    </div>
-    <div class="total-item">
-      <div class="total-val" id="totalRoundsDisplay">0</div>
-      <div class="total-label">Rounds</div>
-    </div>
+  <div class="total-bar">
+    <div class="t-item"><div class="t-val" id="tWork">0:00</div><div class="t-lbl">Travail total</div></div>
+    <div class="t-item"><div class="t-val" id="tSeries">0</div><div class="t-lbl">Séries faites</div></div>
+    <div class="t-item"><div class="t-val" id="tRounds">0</div><div class="t-lbl">Rounds</div></div>
   </div>
 
-  <!-- SPACE -->
-  <div class="spacebar-hint">
-    <div class="key" id="spaceKey">ESPACE</div>
-    <div class="hint-text" id="hintText">Appuie pour démarrer</div>
+  <div class="space-wrap">
+    <div class="space-key" id="spaceKey">ESPACE</div>
+    <div class="hint" id="hint">Appuie pour démarrer</div>
   </div>
 
-  <div class="bottom-actions">
-    <button class="reset-btn" id="resetBtn">↺ RESET</button>
+  <div class="actions">
+    <button class="act-btn" id="resetBtn">↺ RESET</button>
   </div>
 </div>
 
 <script>
-// ─── AUDIO (Web Audio API) ───────────────────────────────────────────────────
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-let audioCtx = null;
+// ══ AUDIO ══════════════════════════════════════════════════════════════════
+const AC = window.AudioContext || window.webkitAudioContext;
+let ac = null;
+const getAC = () => { if (!ac) ac = new AC(); return ac; };
 
-function getAudioCtx() {
-  if (!audioCtx) audioCtx = new AudioCtx();
-  return audioCtx;
-}
-
-function beep(freq, duration, type = 'sine', vol = 0.4) {
+function beep(f, d, t='sine', v=0.35) {
   try {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    gain.gain.setValueAtTime(vol, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + duration);
-  } catch(e) {}
+    const ctx = getAC();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = t; o.frequency.value = f;
+    g.gain.setValueAtTime(v, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d);
+    o.start(); o.stop(ctx.currentTime + d);
+  } catch(e){}
 }
 
-function playWorkStart() {
-  beep(880, 0.12, 'square', 0.3);
-  setTimeout(() => beep(1100, 0.18, 'square', 0.3), 120);
+const playWorkStart = () => { beep(880,.1,'square',.28); setTimeout(()=>beep(1100,.15,'square',.28),110); };
+const playRestStart = () => { beep(440,.18,'sine',.32); setTimeout(()=>beep(330,.28,'sine',.28),160); };
+const playDone = () => { [660,880,1100,1320].forEach((f,i)=>setTimeout(()=>beep(f,i===3?.35:.1),i*110)); };
+const playTick = () => beep(660,.07,'square',.18);
+const playCdTick = () => beep(900,.08,'square',.3);
+const playCdGo = () => {
+  [1100,1320,1760].forEach((f,i) => setTimeout(()=>beep(f,i===2?.3:.08,'square',.45),i*80));
+};
+
+const vib = p => navigator.vibrate && navigator.vibrate(p);
+
+// ══ STATE ══════════════════════════════════════════════════════════════════
+const REST_MAP = {1:20,2:40,5:100,10:200};
+let workDur=60, restDur=20, workMin=1;
+let timeLeft=60, totalTime=60;
+let isRun=false, isRest=false, isCd=false;
+let iv=null, cdTo=null;
+let targetS=1, curS=1;
+let sesWork=0, sesDone=0, sesRounds=0;
+let todayHist=[];
+let darkMode=false, curTheme='default';
+const CIRC = 2*Math.PI*138;
+
+// ══ ELEMENTS ══════════════════════════════════════════════════════════════
+const timeNum  = document.getElementById('timeNum');
+const phaseLbl = document.getElementById('phaseLbl');
+const ringFill = document.getElementById('ringFill');
+const spaceKey = document.getElementById('spaceKey');
+const hint     = document.getElementById('hint');
+const resetBtn = document.getElementById('resetBtn');
+const restVal  = document.getElementById('restVal');
+const dotsRow  = document.getElementById('dotsRow');
+const flash    = document.getElementById('flash');
+const notif    = document.getElementById('notif');
+const sc       = document.getElementById('sc');
+const st       = document.getElementById('st');
+const sVal     = document.getElementById('sVal');
+const tWork    = document.getElementById('tWork');
+const tSeries  = document.getElementById('tSeries');
+const tRounds  = document.getElementById('tRounds');
+const cdBig    = document.getElementById('cdBig');
+const goBlast  = document.getElementById('goBlast');
+const wlDot    = document.getElementById('wlDot');
+
+ringFill.style.strokeDasharray = CIRC;
+ringFill.style.strokeDashoffset = 0;
+
+// ══ HELPERS ═══════════════════════════════════════════════════════════════
+const restFor = m => REST_MAP[m] ?? Math.round(m*20);
+const fmt = s => Math.floor(s/60)+':'+(s%60+'').padStart(2,'0');
+const setProgress = (cur,tot) => { ringFill.style.strokeDashoffset = CIRC*(1-cur/tot); };
+const updateRC = () => { sc.textContent=curS; st.textContent=targetS; };
+const updateBar = () => { tWork.textContent=fmt(sesWork); tSeries.textContent=sesDone; tRounds.textContent=sesRounds; };
+const getColor = () => getComputedStyle(document.documentElement).getPropertyValue('--work').trim();
+
+function showNotif(msg, type='') {
+  notif.textContent=msg; notif.className='notif'+(type?' '+type:'');
+  void notif.offsetWidth; notif.classList.add('show');
+  setTimeout(()=>notif.classList.remove('show'),2500);
 }
 
-function playRestStart() {
-  beep(440, 0.2, 'sine', 0.35);
-  setTimeout(() => beep(330, 0.3, 'sine', 0.3), 180);
+function doFlash(type) {
+  flash.className='flash '+(type==='rest'?'rest':'work');
+  flash.classList.add('hit');
+  setTimeout(()=>flash.classList.remove('hit'),160);
 }
 
-function playDone() {
-  beep(660, 0.1); setTimeout(() => beep(880, 0.1), 110);
-  setTimeout(() => beep(1100, 0.1), 220); setTimeout(() => beep(1320, 0.3), 330);
+function doWipe(type) {
+  const el = document.getElementById(type==='rest'?'wipeRest':'wipeWork');
+  el.className='phase-wipe'+(type==='rest'?' rest':'');
+  void el.offsetWidth;
+  el.classList.add('animate');
+  setTimeout(()=>el.classList.remove('animate'),520);
 }
 
-function playCountdown() { beep(660, 0.08, 'square', 0.2); }
+// ══ PARTICLES ══════════════════════════════════════════════════════════════
+const cv = document.getElementById('fx');
+const cx = cv.getContext('2d');
+let pts = [];
+const resizeFX = () => { cv.width=innerWidth; cv.height=innerHeight; };
+resizeFX(); addEventListener('resize',resizeFX);
 
-function playCountdownTick() { beep(880, 0.1, 'square', 0.35); }
-function playCountdownGo() {
-  beep(1100, 0.08, 'square', 0.5);
-  setTimeout(() => beep(1320, 0.08, 'square', 0.5), 90);
-  setTimeout(() => beep(1760, 0.25, 'square', 0.5), 180);
+function burst(x,y,col,n=50) {
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2, sp=4+Math.random()*10;
+    pts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-4,
+      a:1, sz:2+Math.random()*5, col,
+      g:.22+Math.random()*.08, d:.014+Math.random()*.012});
+  }
+}
+function bigBurst() {
+  const col=getColor(), mx=innerWidth/2, my=innerHeight/2;
+  burst(mx,my,col,70);
+  [[.2,.3],[.8,.3],[.5,.15],[.2,.7],[.8,.7]].forEach(([rx,ry])=>
+    burst(mx+(rx-.5)*500, my+(ry-.5)*600, col, 18));
 }
 
-function vibrate(pattern) {
-  if (navigator.vibrate) navigator.vibrate(pattern);
+(function fxLoop(){
+  requestAnimationFrame(fxLoop);
+  cx.clearRect(0,0,cv.width,cv.height);
+  pts = pts.filter(p=>p.a>.01);
+  pts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.vx*=.97; p.a-=p.d;
+    cx.save(); cx.globalAlpha=p.a; cx.fillStyle=p.col;
+    cx.beginPath(); cx.arc(p.x,p.y,p.sz,0,Math.PI*2); cx.fill();
+    cx.restore();
+  });
+})();
+
+// GO blast
+function fireGoBlast() {
+  goBlast.className='go-blast';
+  void goBlast.offsetWidth;
+  goBlast.classList.add('fire');
+  bigBurst();
+  setTimeout(()=>goBlast.classList.remove('fire'),800);
 }
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-const REST_MAP = { 1: 20, 2: 40, 5: 100, 10: 200 };
-
-let workDuration = 60;
-let restDuration = 20;
-let workMinutes = 1;
-let timeLeft = 60;
-let totalTime = 60;
-let isRunning = false;
-let isRest = false;
-let interval = null;
-let roundDots = [];
-
-// Series
-let targetSeries = 1;
-let currentSeries = 1;
-
-// Stats
-let sessionWorkSeconds = 0;
-let sessionCompletedSeries = 0;
-let sessionRounds = 0;
-let todayHistory = [];
-
-// Countdown
-let isCountingDown = false;
-let countdownTimeout = null;
-
-// Dark mode
-let darkMode = false;
-
-const circumference = 2 * Math.PI * 140;
-
-// ─── ELEMENTS ────────────────────────────────────────────────────────────────
-const timeDisplay   = document.getElementById('timeDisplay');
-const phaseLabel    = document.getElementById('phaseLabel');
-const progressFill  = document.getElementById('progressFill');
-const spaceKey      = document.getElementById('spaceKey');
-const hintText      = document.getElementById('hintText');
-const resetBtn      = document.getElementById('resetBtn');
-const restInfoTime  = document.getElementById('restInfoTime');
-const roundsDots    = document.getElementById('roundsDots');
-const flash         = document.getElementById('flash');
-const notif         = document.getElementById('notif');
-const rcCurrent     = document.getElementById('rcCurrent');
-const rcTotal       = document.getElementById('rcTotal');
-const seriesVal     = document.getElementById('seriesVal');
-const totalWorkDisplay       = document.getElementById('totalWorkDisplay');
-const completedSeriesDisplay = document.getElementById('completedSeriesDisplay');
-const totalRoundsDisplay     = document.getElementById('totalRoundsDisplay');
-
-progressFill.style.strokeDasharray = circumference;
-progressFill.style.strokeDashoffset = 0;
-
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function getRestForMins(m) {
-  if (REST_MAP[m]) return REST_MAP[m];
-  return Math.round(m * 20);
-}
-
-function formatTime(s) {
-  const m = Math.floor(s / 60);
-  return m + ':' + String(s % 60).padStart(2, '0');
-}
-
-function updateProgress(cur, tot) {
-  progressFill.style.strokeDashoffset = circumference * (1 - cur / tot);
-}
-
-function showNotif(msg, type) {
-  notif.textContent = msg;
-  notif.className = 'notif' + (type ? ' ' + type : '');
-  void notif.offsetWidth;
-  notif.classList.add('show');
-  setTimeout(() => notif.classList.remove('show'), 2400);
-}
-
-function triggerFlash(type) {
-  flash.className = 'flash ' + (type === 'rest' ? 'rest-flash' : 'work-flash');
-  flash.classList.add('trigger');
-  setTimeout(() => flash.classList.remove('trigger'), 150);
-}
-
-function updateTotalStrip() {
-  totalWorkDisplay.textContent = formatTime(sessionWorkSeconds);
-  completedSeriesDisplay.textContent = sessionCompletedSeries;
-  totalRoundsDisplay.textContent = sessionRounds;
-}
-
-function updateRoundCounter() {
-  rcCurrent.textContent = currentSeries;
-  rcTotal.textContent = targetSeries;
-}
-
-// ─── DOTS ────────────────────────────────────────────────────────────────────
+// ══ DOTS ══════════════════════════════════════════════════════════════════
+let dots=[];
 function rebuildDots() {
-  roundsDots.innerHTML = '';
-  roundDots = [];
-  for (let i = 0; i < targetSeries; i++) {
-    const d = document.createElement('div');
-    d.className = 'round-dot';
-    if (i < sessionCompletedSeries) d.classList.add('done');
-    else if (i === currentSeries - 1 && isRunning) d.classList.add('active');
-    roundsDots.appendChild(d);
-    roundDots.push(d);
+  dotsRow.innerHTML=''; dots=[];
+  for(let i=0;i<targetS;i++){
+    const d=document.createElement('div');
+    d.className='dot'+(i<sesDone?' done':i===curS-1&&isRun?' active':'');
+    dotsRow.appendChild(d); dots.push(d);
   }
 }
+const setDotActive = i => { dots.forEach(d=>d.classList.remove('active')); if(dots[i])dots[i].classList.add('active'); };
+const setDotDone = i => { if(dots[i]){dots[i].classList.remove('active');dots[i].classList.add('done');} };
 
-function markDotActive(idx) {
-  roundDots.forEach(d => d.classList.remove('active'));
-  if (roundDots[idx]) roundDots[idx].classList.add('active');
-}
-
-function markDotDone(idx) {
-  if (roundDots[idx]) {
-    roundDots[idx].classList.remove('active');
-    roundDots[idx].classList.add('done');
-  }
-}
-
-// ─── PHASES ──────────────────────────────────────────────────────────────────
+// ══ PHASES ════════════════════════════════════════════════════════════════
 function startWork() {
-  isRest = false;
-  timeLeft = workDuration;
-  totalTime = workDuration;
+  isRest=false; timeLeft=workDur; totalTime=workDur;
   document.body.classList.remove('rest-phase');
-  phaseLabel.textContent = 'TRAVAIL';
-  timeDisplay.classList.remove('work-active');
-  void timeDisplay.offsetWidth;
-  timeDisplay.classList.add('work-active');
-  updateProgress(timeLeft, totalTime);
-  timeDisplay.textContent = formatTime(timeLeft);
-  hintText.textContent = 'ESPACE = pause';
-  markDotActive(currentSeries - 1);
-  playWorkStart();
-  vibrate([80, 40, 80]);
+  phaseLbl.textContent='TRAVAIL';
+  timeNum.classList.remove('work-col'); void timeNum.offsetWidth;
+  timeNum.classList.add('work-col');
+  timeNum.textContent=fmt(timeLeft);
+  setProgress(timeLeft,totalTime);
+  hint.textContent='ESPACE = pause';
+  setDotActive(curS-1);
+  playWorkStart(); vib([80,40,80]);
 }
 
 function startRest() {
-  isRest = true;
-  timeLeft = restDuration;
-  totalTime = restDuration;
+  isRest=true; timeLeft=restDur; totalTime=restDur;
   document.body.classList.add('rest-phase');
-  phaseLabel.textContent = 'REPOS';
-  timeDisplay.classList.remove('work-active');
-  updateProgress(timeLeft, totalTime);
-  timeDisplay.textContent = formatTime(timeLeft);
-  hintText.textContent = 'Repos en cours…';
-
-  // stats
-  sessionWorkSeconds += workDuration;
-  sessionRounds++;
-  updateTotalStrip();
-
-  markDotDone(currentSeries - 1);
-  triggerFlash('rest');
-  showNotif('REPOS — ' + formatTime(restDuration), 'rest');
-  playRestStart();
-  vibrate([200, 80, 200]);
+  phaseLbl.textContent='REPOS';
+  timeNum.classList.remove('work-col');
+  timeNum.textContent=fmt(timeLeft);
+  setProgress(timeLeft,totalTime);
+  hint.textContent='Récupération en cours…';
+  sesWork+=workDur; sesRounds++; updateBar();
+  setDotDone(curS-1);
+  doWipe('rest'); doFlash('rest');
+  showNotif('REPOS — '+fmt(restDur),'rest');
+  playRestStart(); vib([200,80,200]);
 }
 
-function finishSeries() {
-  // All series done
-  clearInterval(interval);
-  isRunning = false;
-  isRest = false;
-  document.body.classList.remove('rest-phase');
-  timeDisplay.classList.remove('work-active', 'pulsing');
-
-  sessionCompletedSeries++;
-  updateTotalStrip();
-  rebuildDots();
-
-  // Save to today's history
-  const now = new Date();
-  const timeStr = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
-  const entry = {
-    time: timeStr,
-    work: formatTime(workDuration),
-    series: targetSeries,
-    totalWork: formatTime(sessionWorkSeconds)
-  };
-  todayHistory.unshift(entry);
-  saveTodayHistory();
-
-  playDone();
-  vibrate([100,50,100,50,300]);
-  triggerFlash('work');
-  releaseWakeLock();
-  showNotif('SESSION TERMINÉE !', 'done');
-  phaseLabel.textContent = 'TERMINÉ 🎉';
-  hintText.textContent = 'Appuie ESPACE pour recommencer';
-
-  // animate timer
-  timeDisplay.classList.add('complete-pop');
-  setTimeout(() => timeDisplay.classList.remove('complete-pop'), 400);
-
-  // Reset for next session
-  currentSeries = 1;
-  updateRoundCounter();
-  timeLeft = workDuration;
-  totalTime = workDuration;
-  updateProgress(timeLeft, totalTime);
-  timeDisplay.textContent = formatTime(timeLeft);
+function finishAll() {
+  clearInterval(iv); isRun=false; isRest=false;
+  document.body.classList.remove('rest-phase','running');
+  timeNum.classList.remove('work-col','pulse');
+  sesDone++; updateBar(); rebuildDots();
+  const now=new Date();
+  todayHist.unshift({
+    time:now.getHours()+':'+(now.getMinutes()+'').padStart(2,'0'),
+    work:fmt(workDur), series:targetS, total:fmt(sesWork)
+  });
+  saveHist();
+  playDone(); vib([100,50,100,50,300]);
+  doWipe('work'); doFlash('work'); releaseWL();
+  showNotif('SESSION TERMINÉE ! 🔥','done');
+  phaseLbl.textContent='TERMINÉ 🎉';
+  hint.textContent='Appuie ESPACE pour recommencer';
+  timeNum.classList.add('cpop');
+  setTimeout(()=>timeNum.classList.remove('cpop'),500);
+  curS=1; updateRC(); timeLeft=workDur; totalTime=workDur;
+  setProgress(timeLeft,totalTime); timeNum.textContent=fmt(timeLeft);
+  bigBurst();
 }
 
-function advanceToNextSeries() {
-  // rest done → next series or finish
-  currentSeries++;
-  if (currentSeries > targetSeries) {
-    finishSeries();
-  } else {
-    updateRoundCounter();
-    clearInterval(interval);
-    startWork();
-    interval = setInterval(tick, 1000);
-    triggerFlash('work');
-    showNotif('SÉRIE ' + currentSeries + ' / ' + targetSeries, '');
-  }
+function nextSeries() {
+  curS++;
+  if(curS>targetS){ finishAll(); return; }
+  updateRC();
+  clearInterval(iv);
+  startWork();
+  iv=setInterval(tick,1000);
+  doWipe('work'); doFlash('work');
+  showNotif('SÉRIE '+curS+' / '+targetS);
 }
 
-// ─── TICK ────────────────────────────────────────────────────────────────────
+// ══ TICK ══════════════════════════════════════════════════════════════════
 function tick() {
-  if (timeLeft <= 0) {
-    if (!isRest) {
-      clearInterval(interval);
-      startRest();
-      interval = setInterval(tick, 1000);
-    } else {
-      advanceToNextSeries();
-    }
+  if(timeLeft<=0){
+    if(!isRest){ clearInterval(iv); startRest(); iv=setInterval(tick,1000); }
+    else nextSeries();
     return;
   }
   timeLeft--;
-  timeDisplay.textContent = formatTime(timeLeft);
-  updateProgress(timeLeft, totalTime);
-
-  // Work stat counter (live)
-  if (!isRest && isRunning) {
-    updateTotalStrip();
-  }
-
-  // Countdown beeps last 3s
-  if (timeLeft <= 3 && timeLeft > 0) {
-    timeDisplay.classList.add('pulsing');
-    playCountdown();
-  } else {
-    timeDisplay.classList.remove('pulsing');
-  }
+  timeNum.textContent=fmt(timeLeft);
+  setProgress(timeLeft,totalTime);
+  if(!isRest) { sesWork; updateBar(); }
+  if(timeLeft<=3&&timeLeft>0){ timeNum.classList.add('pulse'); playTick(); }
+  else timeNum.classList.remove('pulse');
+  // tick pop every second
+  timeNum.classList.remove('tick-anim');
+  void timeNum.offsetWidth;
+  timeNum.classList.add('tick-anim');
 }
 
-// ─── COUNTDOWN 3-2-1 GO ──────────────────────────────────────────────────────
-function startCountdown(callback) {
-  isCountingDown = true;
-  hintText.textContent = 'ESPACE = annuler';
-  let count = 3;
-
-  function step() {
-    if (!isCountingDown) return; // cancelled
-    if (count > 0) {
-      phaseLabel.textContent = count + '…';
-      timeDisplay.textContent = count;
-      timeDisplay.classList.remove('work-active');
-      updateProgress(count, 3);
-      playCountdownTick();
-      vibrate(40);
-      count--;
-      countdownTimeout = setTimeout(step, 1000);
+// ══ COUNTDOWN ═════════════════════════════════════════════════════════════
+function runCd(cb) {
+  isCd=true; hint.textContent='ESPACE = annuler';
+  document.body.classList.add('running');
+  let n=3;
+  function step(){
+    if(!isCd) return;
+    if(n>0){
+      phaseLbl.textContent=n+'…';
+      // animate cdBig
+      cdBig.textContent=n;
+      cdBig.className='cd-big show';
+      setTimeout(()=>{ cdBig.classList.remove('show'); cdBig.classList.add('out'); },700);
+      setTimeout(()=>cdBig.classList.remove('out'),900);
+      timeNum.textContent=n;
+      setProgress(n,3);
+      playCdTick(); vib(50);
+      n--; cdTo=setTimeout(step,1000);
     } else {
-      phaseLabel.textContent = 'GO !';
-      timeDisplay.textContent = 'GO';
-      updateProgress(1, 1);
-      playCountdownGo();
-      vibrate([60, 30, 60]);
-      triggerFlash('work');
-      triggerGoExplosion();
-      countdownTimeout = setTimeout(() => {
-        isCountingDown = false;
-        callback();
-      }, 600);
+      cdBig.textContent='GO'; cdBig.className='cd-big show';
+      phaseLbl.textContent='GO !';
+      timeNum.textContent='GO';
+      setProgress(1,1);
+      playCdGo(); vib([60,30,60]);
+      doFlash('work'); fireGoBlast();
+      cdTo=setTimeout(()=>{ cdBig.classList.add('out'); isCd=false; cb(); },650);
     }
   }
   step();
 }
 
-function cancelCountdown() {
-  isCountingDown = false;
-  clearTimeout(countdownTimeout);
-  phaseLabel.textContent = 'PRÊT';
-  hintText.textContent = 'Appuie pour démarrer';
-  timeDisplay.textContent = formatTime(workDuration);
-  timeDisplay.classList.remove('work-active');
-  updateProgress(workDuration, workDuration);
+function cancelCd() {
+  isCd=false; clearTimeout(cdTo);
+  document.body.classList.remove('running');
+  phaseLbl.textContent='PRÊT'; hint.textContent='Appuie pour démarrer';
+  timeNum.textContent=fmt(workDur); timeNum.classList.remove('work-col');
+  cdBig.className='cd-big'; setProgress(workDur,workDur);
 }
 
-// ─── TOGGLE ──────────────────────────────────────────────────────────────────
-function toggleTimer() {
-  if (isRest) return;
-  getAudioCtx();
-
-  if (isCountingDown) {
-    cancelCountdown();
-    return;
-  }
-
-  if (!isRunning) {
-    startCountdown(() => {
-      isRunning = true;
-      requestWakeLock();
-      startWork();
-      interval = setInterval(tick, 1000);
+// ══ TOGGLE ════════════════════════════════════════════════════════════════
+function toggle() {
+  if(isRest) return;
+  getAC();
+  if(isCd){ cancelCd(); return; }
+  if(!isRun){
+    runCd(()=>{
+      isRun=true; requestWL();
+      document.body.classList.add('running');
+      startWork(); iv=setInterval(tick,1000);
     });
   } else {
-    isRunning = false;
-    clearInterval(interval);
-    phaseLabel.textContent = 'PAUSE';
-    hintText.textContent = 'ESPACE = reprendre';
+    isRun=false; clearInterval(iv);
+    document.body.classList.remove('running');
+    phaseLbl.textContent='PAUSE';
+    hint.textContent='ESPACE = reprendre';
   }
 }
 
-// ─── DURATION ────────────────────────────────────────────────────────────────
-function setDuration(mins) {
-  if (isRunning || isCountingDown) return;
-  workMinutes = mins;
-  workDuration = mins * 60;
-  restDuration = getRestForMins(mins);
-  timeLeft = workDuration;
-  totalTime = workDuration;
-  timeDisplay.textContent = formatTime(timeLeft);
-  updateProgress(timeLeft, totalTime);
-  restInfoTime.textContent = formatTime(restDuration);
-  document.querySelectorAll('.preset-btn').forEach(b =>
-    b.classList.toggle('active', parseInt(b.dataset.min) === mins)
-  );
-  document.getElementById('customInput').value = '';
+// ══ DURATION ══════════════════════════════════════════════════════════════
+function setDur(m) {
+  if(isRun||isCd) return;
+  workMin=m; workDur=m*60; restDur=restFor(m);
+  timeLeft=workDur; totalTime=workDur;
+  timeNum.textContent=fmt(timeLeft);
+  setProgress(timeLeft,totalTime);
+  restVal.textContent=fmt(restDur);
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.toggle('on',+b.dataset.m===m));
+  document.getElementById('cIn').value='';
 }
 
-// ─── SERIES ──────────────────────────────────────────────────────────────────
-function setSeries(n) {
-  if (isRunning || isCountingDown) return;
-  targetSeries = Math.max(1, Math.min(20, n));
-  seriesVal.textContent = targetSeries;
-  updateRoundCounter();
-  rebuildDots();
-}
+document.querySelectorAll('.pbtn').forEach(b=>b.addEventListener('click',()=>setDur(+b.dataset.m)));
 
-document.getElementById('seriesMinus').addEventListener('click', () => setSeries(targetSeries - 1));
-document.getElementById('seriesPlus').addEventListener('click', () => setSeries(targetSeries + 1));
-
-// ─── PRESETS ─────────────────────────────────────────────────────────────────
-document.querySelectorAll('.preset-btn').forEach(btn =>
-  btn.addEventListener('click', () => setDuration(parseInt(btn.dataset.min)))
-);
-
-document.getElementById('customSetBtn').addEventListener('click', () => {
-  const val = parseInt(document.getElementById('customInput').value);
-  if (val >= 1 && val <= 60) {
-    if (isRunning) return;
-    workMinutes = val;
-    workDuration = val * 60;
-    restDuration = getRestForMins(val);
-    timeLeft = workDuration;
-    totalTime = workDuration;
-    timeDisplay.textContent = formatTime(timeLeft);
-    updateProgress(timeLeft, totalTime);
-    restInfoTime.textContent = formatTime(restDuration);
-    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+document.getElementById('cOk').addEventListener('click',()=>{
+  const v=+document.getElementById('cIn').value;
+  if(v>=1&&v<=60&&!isRun&&!isCd){
+    workMin=v; workDur=v*60; restDur=restFor(v);
+    timeLeft=workDur; totalTime=workDur;
+    timeNum.textContent=fmt(timeLeft); setProgress(timeLeft,totalTime);
+    restVal.textContent=fmt(restDur);
+    document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('on'));
   }
 });
+document.getElementById('cIn').addEventListener('keydown',e=>e.key==='Enter'&&document.getElementById('cOk').click());
 
-document.getElementById('customInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('customSetBtn').click();
+// ══ SERIES ════════════════════════════════════════════════════════════════
+function setSeries(n){
+  if(isRun||isCd) return;
+  targetS=Math.max(1,Math.min(20,n));
+  sVal.textContent=targetS; updateRC(); rebuildDots();
+}
+document.getElementById('sMinus').addEventListener('click',()=>setSeries(targetS-1));
+document.getElementById('sPlus').addEventListener('click',()=>setSeries(targetS+1));
+
+// ══ RESET ═════════════════════════════════════════════════════════════════
+resetBtn.addEventListener('click',()=>{
+  if(isCd) cancelCd();
+  clearInterval(iv); releaseWL();
+  isRun=false; isRest=false; curS=1;
+  document.body.classList.remove('rest-phase','running');
+  timeNum.classList.remove('work-col','pulse');
+  phaseLbl.textContent='PRÊT'; hint.textContent='Appuie pour démarrer';
+  timeLeft=workDur; totalTime=workDur;
+  timeNum.textContent=fmt(timeLeft); setProgress(timeLeft,totalTime);
+  updateRC(); rebuildDots();
 });
 
-// ─── RESET ───────────────────────────────────────────────────────────────────
-resetBtn.addEventListener('click', () => {
-  if (isCountingDown) cancelCountdown();
-  clearInterval(interval);
-  releaseWakeLock();
-  isRunning = false; isRest = false;
-  currentSeries = 1;
-  document.body.classList.remove('rest-phase');
-  timeDisplay.classList.remove('work-active', 'pulsing');
-  phaseLabel.textContent = 'PRÊT';
-  hintText.textContent = 'Appuie pour démarrer';
-  timeLeft = workDuration; totalTime = workDuration;
-  timeDisplay.textContent = formatTime(timeLeft);
-  updateProgress(timeLeft, totalTime);
-  updateRoundCounter();
-  rebuildDots();
-});
-
-// ─── KEYBOARD ────────────────────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
-    e.preventDefault();
-    spaceKey.classList.add('pressed');
-    toggleTimer();
+// ══ KEYBOARD ══════════════════════════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&e.target.tagName!=='INPUT'){
+    e.preventDefault(); spaceKey.classList.add('press'); toggle();
   }
 });
-document.addEventListener('keyup', e => {
-  if (e.code === 'Space') spaceKey.classList.remove('pressed');
-});
+document.addEventListener('keyup',e=>{ if(e.code==='Space') spaceKey.classList.remove('press'); });
+document.getElementById('ringWrap').addEventListener('click',()=>{ if(!isRest) toggle(); });
+spaceKey.addEventListener('click',toggle);
 
-document.getElementById('timerContainer').addEventListener('click', () => {
-  if (!isRest) toggleTimer();
-});
-
-// ─── DARK MODE ───────────────────────────────────────────────────────────────
-const darkBtn = document.getElementById('darkModeBtn');
-darkBtn.addEventListener('click', () => {
-  darkMode = !darkMode;
-  document.body.classList.toggle('dark-mode', darkMode);
-  darkBtn.classList.toggle('active-mode', darkMode);
-  localStorage.setItem('sport_dark', darkMode ? '1' : '0');
-});
-
-// ─── PROGRAMS ────────────────────────────────────────────────────────────────
-function getPrograms() {
-  try { return JSON.parse(localStorage.getItem('sport_programs') || '[]'); } catch { return []; }
-}
-function savePrograms(arr) { localStorage.setItem('sport_programs', JSON.stringify(arr)); }
-
-document.getElementById('saveProgramBtn').addEventListener('click', () => {
-  const name = document.getElementById('programNameInput').value.trim();
-  if (!name) return;
-  const programs = getPrograms();
-  programs.unshift({
-    name,
-    workMin: workMinutes,
-    series: targetSeries,
-    rest: restDuration,
-    saved: new Date().toLocaleDateString('fr-FR')
-  });
-  savePrograms(programs);
-  document.getElementById('programNameInput').value = '';
-  renderPrograms();
-  showNotif('PROGRAMME SAUVEGARDÉ', 'done');
-});
-
-function renderPrograms() {
-  const list = document.getElementById('programsList');
-  const programs = getPrograms();
-  if (!programs.length) {
-    list.innerHTML = '<div class="empty-state">Aucun programme sauvegardé</div>';
-    return;
-  }
-  list.innerHTML = programs.map((p, i) => `
-    <div class="program-item">
-      <div class="program-info">
-        <div class="program-name">${p.name}</div>
-        <div class="program-details">${p.workMin} min · ${p.series} série(s) · repos ${formatTime(p.rest)} · ${p.saved}</div>
-      </div>
-      <button class="program-load" onclick="loadProgram(${i})">CHARGER</button>
-      <button class="program-del" onclick="deleteProgram(${i})">✕</button>
-    </div>
-  `).join('');
-}
-
-function loadProgram(i) {
-  if (isRunning) return;
-  const p = getPrograms()[i];
-  if (!p) return;
-  workMinutes = p.workMin;
-  workDuration = p.workMin * 60;
-  restDuration = p.rest;
-  timeLeft = workDuration; totalTime = workDuration;
-  timeDisplay.textContent = formatTime(timeLeft);
-  updateProgress(timeLeft, totalTime);
-  restInfoTime.textContent = formatTime(restDuration);
-  document.querySelectorAll('.preset-btn').forEach(b =>
-    b.classList.toggle('active', parseInt(b.dataset.min) === p.workMin)
-  );
-  setSeries(p.series);
-  closePanel('programsPanel');
-  showNotif('PROGRAMME : ' + p.name.toUpperCase(), 'done');
-}
-
-function deleteProgram(i) {
-  const programs = getPrograms();
-  programs.splice(i, 1);
-  savePrograms(programs);
-  renderPrograms();
-}
-
-// ─── HISTORY ─────────────────────────────────────────────────────────────────
-function getTodayKey() {
-  const d = new Date();
-  return `sport_hist_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`;
-}
-
-function saveTodayHistory() {
-  localStorage.setItem(getTodayKey(), JSON.stringify(todayHistory));
-}
-
-function loadTodayHistory() {
+// ══ WAKE LOCK ═════════════════════════════════════════════════════════════
+let wl=null;
+async function requestWL(){
   try {
-    const raw = localStorage.getItem(getTodayKey());
-    todayHistory = raw ? JSON.parse(raw) : [];
-  } catch { todayHistory = []; }
+    if('wakeLock' in navigator){ wl=await navigator.wakeLock.request('screen'); wlDot.classList.add('on');
+      wl.addEventListener('release',()=>wlDot.classList.remove('on')); }
+  } catch(e){}
 }
-
-function renderStats() {
-  document.getElementById('statTotalWork').textContent = formatTime(sessionWorkSeconds);
-  document.getElementById('statRounds').textContent = sessionRounds;
-  document.getElementById('statSeries').textContent = sessionCompletedSeries;
-
-  const list = document.getElementById('historyList');
-  if (!todayHistory.length) {
-    list.innerHTML = '<div class="empty-state">Aucune session aujourd\'hui</div>';
-    return;
-  }
-  list.innerHTML = todayHistory.map(h => `
-    <div class="history-item">
-      <div class="history-left">
-        <div class="history-time">${h.time}</div>
-        <div class="history-desc">${h.work} × ${h.series} série(s)</div>
-      </div>
-      <div class="history-right">${h.totalWork}</div>
-    </div>
-  `).join('');
+async function releaseWL(){
+  if(wl){ await wl.release(); wl=null; wlDot.classList.remove('on'); }
 }
-
-document.getElementById('clearHistBtn').addEventListener('click', () => {
-  todayHistory = [];
-  saveTodayHistory();
-  renderStats();
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState==='visible'&&isRun) await requestWL();
 });
 
-// ─── PANEL HELPERS ───────────────────────────────────────────────────────────
-function openPanel(id) {
-  document.getElementById(id).classList.add('open');
-}
-function closePanel(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-// Close on overlay click
-document.querySelectorAll('.panel-overlay').forEach(el => {
-  el.addEventListener('click', e => {
-    if (e.target === el) el.classList.remove('open');
-  });
-});
-
-
-// ─── WAKE LOCK ────────────────────────────────────────────────────────────────
-let wakeLock = null;
-const wakelockDot = document.getElementById('wakelockDot');
-
-async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLock = await navigator.wakeLock.request('screen');
-      wakelockDot.classList.add('active');
-      wakeLock.addEventListener('release', () => {
-        wakelockDot.classList.remove('active');
-      });
-    }
-  } catch(e) {}
-}
-
-async function releaseWakeLock() {
-  if (wakeLock) {
-    await wakeLock.release();
-    wakeLock = null;
-    wakelockDot.classList.remove('active');
-  }
-}
-
-// Re-acquire on visibility change (phone unlock)
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState === 'visible' && isRunning) {
-    await requestWakeLock();
-  }
-});
-
-// ─── PARTICLES ────────────────────────────────────────────────────────────────
-const canvas = document.getElementById('particleCanvas');
-const ctx2d = canvas.getContext('2d');
-let particles = [];
-
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-function spawnParticles(x, y, color, count = 40) {
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 3 + Math.random() * 9;
-    particles.push({
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 3,
-      alpha: 1,
-      size: 3 + Math.random() * 5,
-      color,
-      gravity: 0.25,
-      decay: 0.018 + Math.random() * 0.012
-    });
-  }
-}
-
-function spawnBurst(color) {
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  spawnParticles(cx, cy, color, 60);
-  // extra corner sparks
-  [[0.2,0.3],[0.8,0.3],[0.5,0.15]].forEach(([rx,ry]) =>
-    spawnParticles(cx + (rx-0.5)*400, cy + (ry-0.5)*400, color, 15)
-  );
-}
-
-function animateParticles() {
-  requestAnimationFrame(animateParticles);
-  ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-  particles = particles.filter(p => p.alpha > 0.01);
-  particles.forEach(p => {
-    p.x += p.vx; p.y += p.vy;
-    p.vy += p.gravity;
-    p.vx *= 0.98;
-    p.alpha -= p.decay;
-    ctx2d.save();
-    ctx2d.globalAlpha = p.alpha;
-    ctx2d.fillStyle = p.color;
-    ctx2d.beginPath();
-    ctx2d.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx2d.fill();
-    ctx2d.restore();
-  });
-}
-animateParticles();
-
-// GO explosion text
-const goExplosion = document.getElementById('goExplosion');
-function triggerGoExplosion() {
-  goExplosion.classList.remove('pop');
-  void goExplosion.offsetWidth;
-  goExplosion.classList.add('pop');
-  const color = getComputedStyle(document.documentElement).getPropertyValue('--work').trim();
-  spawnBurst(color);
-  setTimeout(() => goExplosion.classList.remove('pop'), 700);
-}
-
-// ─── THEMES ──────────────────────────────────────────────────────────────────
-const THEMES = [
-  { id: 'default', label: 'ACID',   color: '#e8ff3b' },
-  { id: 'fire',    label: 'FIRE',   color: '#ff6b35' },
-  { id: 'ice',     label: 'ICE',    color: '#7dd3fc' },
-  { id: 'neon',    label: 'NEON',   color: '#f0abfc' },
-  { id: 'blood',   label: 'BLOOD',  color: '#ff3b3b' },
-  { id: 'matrix',  label: 'MTRX',   color: '#00ff41' },
+// ══ THEMES ════════════════════════════════════════════════════════════════
+const THEMES=[
+  {id:'default',lbl:'ACID', col:'#e8ff3b'},
+  {id:'fire',   lbl:'FIRE', col:'#ff6b35'},
+  {id:'ice',    lbl:'ICE',  col:'#7dd3fc'},
+  {id:'neon',   lbl:'NEON', col:'#f0abfc'},
+  {id:'blood',  lbl:'BLOOD',col:'#ff3b3b'},
+  {id:'matrix', lbl:'MTRX', col:'#00ff41'},
 ];
 
-let currentTheme = localStorage.getItem('sport_theme') || 'default';
-
-function applyTheme(id) {
-  THEMES.forEach(t => document.body.classList.remove('theme-' + t.id));
-  if (id !== 'default') document.body.classList.add('theme-' + id);
-  currentTheme = id;
-  localStorage.setItem('sport_theme', id);
-  document.querySelectorAll('.theme-swatch').forEach(s =>
-    s.classList.toggle('active', s.dataset.theme === id)
-  );
+function applyTheme(id){
+  THEMES.forEach(t=>document.body.classList.remove('theme-'+t.id));
+  if(id!=='default') document.body.classList.add('theme-'+id);
+  curTheme=id; localStorage.setItem('sport_theme',id);
+  document.querySelectorAll('.tsw').forEach(s=>s.classList.toggle('on',s.dataset.t===id));
+  document.getElementById('themeColorMeta').content = id==='default'?'#0a0a0a':
+    {fire:'#0d0500',ice:'#020d18',neon:'#07000f',blood:'#0a0000',matrix:'#000300'}[id];
 }
 
-function buildThemeRow() {
-  const row = document.getElementById('themeRow');
-  row.innerHTML = THEMES.map(t => `
-    <div class="theme-swatch-wrap">
-      <div class="theme-swatch" data-theme="${t.id}"
-        style="background:${t.color}"
-        onclick="applyTheme('${t.id}')"></div>
-      <div class="theme-swatch-label">${t.label}</div>
-    </div>
-  `).join('');
+function buildThemes(){
+  const s=document.getElementById('themeStrip');
+  s.innerHTML=THEMES.map(t=>`
+    <div class="tsw-wrap">
+      <div class="tsw" data-t="${t.id}" style="background:${t.col}" onclick="applyTheme('${t.id}')"></div>
+      <div class="tsw-lbl">${t.lbl}</div>
+    </div>`).join('');
 }
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
-(function init() {
-  if (localStorage.getItem('sport_dark') === '1') {
-    darkMode = true;
-    document.body.classList.add('dark-mode');
-    darkBtn.classList.add('active-mode');
+// ══ DARK MODE ═════════════════════════════════════════════════════════════
+const darkBtn=document.getElementById('darkBtn');
+darkBtn.addEventListener('click',()=>{
+  darkMode=!darkMode;
+  document.body.classList.toggle('dark-mode',darkMode);
+  darkBtn.classList.toggle('on',darkMode);
+  localStorage.setItem('sport_dark',darkMode?'1':'0');
+});
+
+// ══ PROGRAMS ══════════════════════════════════════════════════════════════
+const getProgs=()=>{ try{return JSON.parse(localStorage.getItem('sport_progs')||'[]')}catch{return[]} };
+const saveProgs=a=>localStorage.setItem('sport_progs',JSON.stringify(a));
+
+document.getElementById('pgSaveBtn').addEventListener('click',()=>{
+  const name=document.getElementById('pgName').value.trim();
+  if(!name) return;
+  const progs=getProgs();
+  progs.unshift({name,workMin,series:targetS,rest:restDur,saved:new Date().toLocaleDateString('fr-FR')});
+  saveProgs(progs);
+  document.getElementById('pgName').value='';
+  renderProgs(); showNotif('PROGRAMME SAUVEGARDÉ','done');
+});
+
+function renderProgs(){
+  const list=document.getElementById('pgList'), progs=getProgs();
+  list.innerHTML=!progs.length?'<div class="empty">Aucun programme</div>':
+    progs.map((p,i)=>`<div class="prog-item">
+      <div class="pi-info"><div class="pi-name">${p.name}</div>
+      <div class="pi-det">${p.workMin}min · ${p.series} série(s) · repos ${fmt(p.rest)} · ${p.saved}</div></div>
+      <button class="pi-load" onclick="loadProg(${i})">CHARGER</button>
+      <button class="pi-del" onclick="delProg(${i})">✕</button>
+    </div>`).join('');
+}
+
+function loadProg(i){
+  if(isRun) return;
+  const p=getProgs()[i]; if(!p) return;
+  workMin=p.workMin; workDur=p.workMin*60; restDur=p.rest;
+  timeLeft=workDur; totalTime=workDur;
+  timeNum.textContent=fmt(timeLeft); setProgress(timeLeft,totalTime);
+  restVal.textContent=fmt(restDur);
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.toggle('on',+b.dataset.m===p.workMin));
+  setSeries(p.series); closePanel('pgPanel');
+  showNotif('PROGRAMME : '+p.name.toUpperCase(),'done');
+}
+
+function delProg(i){
+  const progs=getProgs(); progs.splice(i,1); saveProgs(progs); renderProgs();
+}
+
+// ══ HISTORY ═══════════════════════════════════════════════════════════════
+const histKey=()=>{ const d=new Date(); return `sh_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`; };
+const saveHist=()=>localStorage.setItem(histKey(),JSON.stringify(todayHist));
+const loadHist=()=>{ try{todayHist=JSON.parse(localStorage.getItem(histKey())||'[]')}catch{todayHist=[]} };
+
+function renderStats(){
+  document.getElementById('stWork').textContent=fmt(sesWork);
+  document.getElementById('stRounds').textContent=sesRounds;
+  document.getElementById('stSeries').textContent=sesDone;
+  const list=document.getElementById('histList');
+  list.innerHTML=!todayHist.length?'<div class="empty">Aucune session aujourd\'hui</div>':
+    todayHist.map(h=>`<div class="hi">
+      <div class="hi-l"><div class="hi-t">${h.time}</div><div class="hi-d">${h.work} × ${h.series} série(s)</div></div>
+      <div class="hi-r">${h.total}</div></div>`).join('');
+}
+
+document.getElementById('clrHist').addEventListener('click',()=>{ todayHist=[]; saveHist(); renderStats(); });
+
+// ══ PANELS ════════════════════════════════════════════════════════════════
+const openPanel=id=>document.getElementById(id).classList.add('open');
+const closePanel=id=>document.getElementById(id).classList.remove('open');
+document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('open'); }));
+
+// ══ PWA SERVICE WORKER ════════════════════════════════════════════════════
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ══ INIT ══════════════════════════════════════════════════════════════════
+(function(){
+  if(localStorage.getItem('sport_dark')==='1'){
+    darkMode=true; document.body.classList.add('dark-mode'); darkBtn.classList.add('on');
   }
-  buildThemeRow();
-  applyTheme(currentTheme);
-  loadTodayHistory();
-  updateProgress(timeLeft, totalTime);
-  restInfoTime.textContent = formatTime(restDuration);
-  updateRoundCounter();
-  rebuildDots();
-  requestWakeLock();
+  buildThemes(); applyTheme(localStorage.getItem('sport_theme')||'default');
+  loadHist();
+  setProgress(timeLeft,totalTime);
+  restVal.textContent=fmt(restDur);
+  updateRC(); rebuildDots();
+  requestWL();
 })();
 </script>
 </body>
